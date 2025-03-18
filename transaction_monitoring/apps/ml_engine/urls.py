@@ -4,6 +4,7 @@ URL patterns for the ML Engine app.
 
 from django.urls import path
 from . import views
+from .views.response_code_views import response_code_dashboard
 
 app_name = 'ml_engine'
 
@@ -58,4 +59,7 @@ urlpatterns = [
     path('api/predict/', views.api_predict, name='api_predict'),
     path('api/models/', views.api_models, name='api_models'),
     path('api/features/', views.api_features, name='api_features'),
+    
+    # Response Code Analytics
+    path('analytics/response-codes/', response_code_dashboard, name='response_code_dashboard'),
 ]
