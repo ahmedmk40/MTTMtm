@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Training Job Details - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:training_dashboard' %}">Training</a></li>
+                    <li class="breadcrumb-item active">Job #{{ job.id }}</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2 mb-0">Training Job #{{ job.id }}</h1>
+                <div>
+                    {% if job.status == 'completed' and job.model_id %}
+                    <a href="{% url 'ml_engine:model_detail' job.model_id %}" class="btn btn-primary">
+                        <i class="fas fa-chart-line mr-2"></i> View Model
+                    </a>
+                    {% endif %}
+                    {% if job.status == 'in_progress' %}
+                    <button class="btn btn-danger" id="cancelJobBtn">
+                        <i class="fas fa-stop-circle mr-2"></i> Cancel Job
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Job Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Job Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Job ID:</div>
+                        <div class="col-md-8">{{ job.id }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Model Name:</div>
+                        <div class="col-md-8">{{ job.model_name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Version:</div>
+                        <div class="col-md-8">{{ job.version }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Model Type:</div>
+                        <div class="col-md-8">{{ job.get_model_type_display }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Status:</div>
+                        <div class="col-md-8">
+                            {% if job.status == 'completed' %}
+                            <span class="badge badge-success">Completed</span>
+                            {% elif job.status == 'in_progress' %}
+                            <span class="badge badge-warning">In Progress</span>
+                            {% elif job.status == 'failed' %}
+                            <span class="badge badge-danger">Failed</span>
+                            {% else %}
+                            <span class="badge badge-secondary">{{ job.status|title }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Started:</div>
+                        <div class="col-md-8">{{ job.started_at|date:"F d, Y H:i:s" }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Completed:</div>
+                        <div class="col-md-8">
+                            {% if job.completed_at %}
+                            {{ job.completed_at|date:"F d, Y H:i:s" }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Duration:</div>
+                        <div class="col-md-8">
+                            {% if job.completed_at %}
+                            {{ job.duration }}
+                            {% elif job.status == 'in_progress' %}
+                            Running...
+                            {% else %}
+                            -
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Created By:</div>
+                        <div class="col-md-8">{{ job.created_by }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Training Parameters -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Training Parameters</h6>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded">{{ job.parameters|pprint }}</pre>
+                </div>
+            </div>
+            
+            <!-- Training Logs -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Training Logs</h6>
+                    {% if job.log_file %}
+                    <a href="{{ job.log_file.url }}" class="btn btn-sm btn-primary" download>
+                        <i class="fas fa-download mr-2"></i> Download Logs
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="log-container bg-dark text-light p-3 rounded" style="height: 300px; overflow-y: auto; font-family: monospace;">
+                        {% if job.logs %}
+                            {% for log in job.logs %}
+                                <div class="log-entry">
+                                    <span class="log-timestamp">{{ log.timestamp }}</span>
+                                    <span class="log-level log-level-{{ log.level|lower }}">{{ log.level }}</span>
+                                    <span class="log-message">{{ log.message }}</span>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-muted">No logs available.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Training Progress -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Training Progress</h6>
+                </div>
+                <div class="card-body">
+                    {% if job.status == 'in_progress' %}
+                    <div class="progress mb-4" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ job.progress }}%;" aria-valuenow="{{ job.progress }}" aria-valuemin="0" aria-valuemax="100">{{ job.progress }}%</div>
+                    </div>
+                    <div class="text-center mb-4">
+                        <h4 class="font-weight-bold">{{ job.current_step }}</h4>
+                        <p>{{ job.step_description }}</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="mb-0">Estimated time remaining: {{ job.estimated_time_remaining }}</p>
+                    </div>
+                    {% elif job.status == 'completed' %}
+                    <div class="text-center">
+                        <i class="fas fa-check-circle text-success fa-5x mb-3"></i>
+                        <h4 class="font-weight-bold">Training Completed</h4>
+                        <p>The model has been successfully trained and is ready to use.</p>
+                    </div>
+                    {% elif job.status == 'failed' %}
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-circle text-danger fa-5x mb-3"></i>
+                        <h4 class="font-weight-bold">Training Failed</h4>
+                        <p>{{ job.error_message }}</p>
+                    </div>
+                    {% else %}
+                    <div class="text-center">
+                        <i class="fas fa-hourglass-half text-warning fa-5x mb-3"></i>
+                        <h4 class="font-weight-bold">{{ job.status|title }}</h4>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Performance Metrics -->
+            {% if job.status == 'completed' and job.metrics %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Performance Metrics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card border-left-primary shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                                Accuracy
+                                            </div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                                {{ job.metrics.accuracy|floatformat:4 }}
+                                            </div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card border-left-success shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                                Precision
+                                            </div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                                {{ job.metrics.precision|floatformat:4 }}
+                                            </div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-bullseye fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card border-left-info shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                                Recall
+                                            </div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                                {{ job.metrics.recall|floatformat:4 }}
+                                            </div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-search fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card border-left-warning shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                                F1 Score
+                                            </div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                                {{ job.metrics.f1_score|floatformat:4 }}
+                                            </div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-balance-scale fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if job.status == 'in_progress' %}
+        // Auto-refresh for in-progress jobs
+        setTimeout(function() {
+            window.location.reload();
+        }, 10000); // Refresh every 10 seconds
+        
+        // Cancel job button
+        const cancelJobBtn = document.getElementById('cancelJobBtn');
+        if (cancelJobBtn) {
+            cancelJobBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to cancel this training job?')) {
+                    // Send AJAX request to cancel the job
+                    fetch('/ml/training/{{ job.id }}/cancel/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            alert('Error cancelling job: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while trying to cancel the job.');
+                    });
+                }
+            });
+        }
+        {% endif %}
+    });
+</script>
+{% endblock %}

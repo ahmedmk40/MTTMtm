@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ML Models - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item active">Models</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">ML Models</h1>
+                {% if perms.ml_engine.add_mlmodel %}
+                <a href="{% url 'ml_engine:model_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle mr-2"></i> Create New Model
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="form-inline">
+                        <div class="form-group mb-2 mr-3">
+                            <label for="model_type" class="mr-2">Model Type:</label>
+                            <select name="model_type" id="model_type" class="form-control">
+                                <option value="">All Types</option>
+                                {% for type_code, type_name in model_types %}
+                                <option value="{{ type_code }}" {% if filter_model_type == type_code %}selected{% endif %}>{{ type_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group mb-2 mr-3">
+                            <label for="is_active" class="mr-2">Status:</label>
+                            <select name="is_active" id="is_active" class="form-control">
+                                <option value="">All</option>
+                                <option value="true" {% if filter_is_active == 'true' %}selected{% endif %}>Active</option>
+                                <option value="false" {% if filter_is_active == 'false' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary mb-2">Apply Filters</button>
+                        <a href="{% url 'ml_engine:model_list' %}" class="btn btn-secondary mb-2 ml-2">Clear Filters</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Models Table -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Models</h6>
+                </div>
+                <div class="card-body">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Version</th>
+                                        <th>Accuracy</th>
+                                        <th>F1 Score</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for model in page_obj %}
+                                    <tr>
+                                        <td>{{ model.name }}</td>
+                                        <td>{{ model.get_model_type_display }}</td>
+                                        <td>{{ model.version }}</td>
+                                        <td>{{ model.accuracy|floatformat:2 }}</td>
+                                        <td>{{ model.f1_score|floatformat:2 }}</td>
+                                        <td>
+                                            {% if model.is_active %}
+                                            <span class="badge badge-success">Active</span>
+                                            {% else %}
+                                            <span class="badge badge-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ model.created_at|date:"M d, Y" }}</td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{% url 'ml_engine:model_detail' model.id %}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if perms.ml_engine.change_mlmodel %}
+                                                    {% if not model.is_active %}
+                                                    <a href="{% url 'ml_engine:model_activate' model.id %}" class="btn btn-sm btn-success">
+                                                        <i class="fas fa-check"></i>
+                                                    </a>
+                                                    {% else %}
+                                                    <a href="{% url 'ml_engine:model_deactivate' model.id %}" class="btn btn-sm btn-warning">
+                                                        <i class="fas fa-pause"></i>
+                                                    </a>
+                                                    {% endif %}
+                                                {% endif %}
+                                                {% if perms.ml_engine.delete_mlmodel %}
+                                                <a href="{% url 'ml_engine:model_delete' model.id %}" class="btn btn-sm btn-danger">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        {% if page_obj.has_other_pages %}
+                        <div class="pagination justify-content-center mt-4">
+                            <ul class="pagination">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% if filter_model_type %}&model_type={{ filter_model_type }}{% endif %}{% if filter_is_active %}&is_active={{ filter_is_active }}{% endif %}" aria-label="First">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filter_model_type %}&model_type={{ filter_model_type }}{% endif %}{% if filter_is_active %}&is_active={{ filter_is_active }}{% endif %}" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% if filter_model_type %}&model_type={{ filter_model_type }}{% endif %}{% if filter_is_active %}&is_active={{ filter_is_active }}{% endif %}">{{ num }}</a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filter_model_type %}&model_type={{ filter_model_type }}{% endif %}{% if filter_is_active %}&is_active={{ filter_is_active }}{% endif %}" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if filter_model_type %}&model_type={{ filter_model_type }}{% endif %}{% if filter_is_active %}&is_active={{ filter_is_active }}{% endif %}" aria-label="Last">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            No models found. {% if perms.ml_engine.add_mlmodel %}<a href="{% url 'ml_engine:model_create' %}">Create a model</a> to get started.{% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

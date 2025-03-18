@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Manager Dashboard - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">Risk Manager Dashboard</h1>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Transaction Count</h5>
+                            <h2 class="mb-0">{{ transaction_count }}</h2>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-credit-card fs-1 text-primary"></i>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted">Last 30 days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Transaction Volume</h5>
+                            <h2 class="mb-0">${{ transaction_volume|floatformat:2 }}</h2>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-cash-stack fs-1 text-success"></i>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted">Last 30 days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Average Risk Score</h5>
+                            <h2 class="mb-0">{{ avg_risk_score|floatformat:2 }}</h2>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-shield-exclamation fs-1 text-warning"></i>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted">All transactions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Decision Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="decisionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Daily Transaction Volume</h5>
+                    <div class="chart-container">
+                        <canvas id="dailyVolumeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Policies -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Risk Policies</h5>
+                    <a href="#" class="btn btn-sm btn-primary">Manage Policies</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Policy Name</th>
+                                    <th>Type</th>
+                                    <th>Threshold</th>
+                                    <th>Status</th>
+                                    <th>Last Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>High-Value Transaction Policy</td>
+                                    <td>Amount</td>
+                                    <td>$10,000.00</td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                    <td>2025-03-10</td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Velocity Monitoring</td>
+                                    <td>Frequency</td>
+                                    <td>10 tx/hour</td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                    <td>2025-03-05</td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>High-Risk Country Policy</td>
+                                    <td>Geographic</td>
+                                    <td>FATF List</td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                    <td>2025-02-28</td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>New Device Policy</td>
+                                    <td>Device</td>
+                                    <td>First-time use</td>
+                                    <td><span class="badge bg-warning">Under Review</span></td>
+                                    <td>2025-03-15</td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Card Testing Detection</td>
+                                    <td>Pattern</td>
+                                    <td>Multiple small tx</td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                    <td>2025-03-01</td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Decision Distribution Chart
+        const decisionCtx = document.getElementById('decisionChart').getContext('2d');
+        const decisionChart = new Chart(decisionCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for decision in decision_counts %}'{{ decision.decision|capfirst }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for decision in decision_counts %}{{ decision.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [
+                        '#198754', // Approve - Green
+                        '#dc3545', // Reject - Red
+                        '#ffc107'  // Review - Yellow
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Daily Volume Chart
+        const volumeCtx = document.getElementById('dailyVolumeChart').getContext('2d');
+        const volumeChart = new Chart(volumeCtx, {
+            type: 'line',
+            data: {
+                labels: [{% for day in daily_volume %}'{{ day.day|date:"M d" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [
+                    {
+                        label: 'Transaction Count',
+                        data: [{% for day in daily_volume %}{{ day.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Volume ($)',
+                        data: [{% for day in daily_volume %}{{ day.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                        borderColor: '#198754',
+                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Count'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Volume ($)'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>User Profile</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'accounts:edit_profile' %}" class="btn btn-primary">
+            <i class="fas fa-edit me-1"></i>Edit Profile
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body text-center">
+                {% if user.profile_picture %}
+                <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="rounded-circle img-fluid mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                {% else %}
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 150px; height: 150px; font-size: 4rem;">
+                    {{ user.username|first|upper }}
+                </div>
+                {% endif %}
+                <h3 class="card-title">{{ user.full_name }}</h3>
+                <p class="card-text text-muted">@{{ user.username }}</p>
+                <p class="card-text">
+                    <span class="badge bg-primary">{{ user.get_role_display }}</span>
+                </p>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                    <i class="fas fa-envelope me-2"></i>{{ user.email|default:"No email provided" }}
+                </li>
+                <li class="list-group-item">
+                    <i class="fas fa-phone me-2"></i>{{ user.phone_number|default:"No phone number provided" }}
+                </li>
+                <li class="list-group-item">
+                    <i class="fas fa-building me-2"></i>{{ user.department|default:"No department provided" }}
+                </li>
+                <li class="list-group-item">
+                    <i class="fas fa-clock me-2"></i>Member since {{ user.date_joined|date:"F j, Y" }}
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">About Me</h5>
+            </div>
+            <div class="card-body">
+                {% if user.bio %}
+                <p>{{ user.bio }}</p>
+                {% else %}
+                <p class="text-muted">No bio provided.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Account Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Notification Preferences</h6>
+                        <ul class="list-group mb-3">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Email Notifications
+                                {% if user.email_notifications %}
+                                <span class="badge bg-success rounded-pill">Enabled</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-pill">Disabled</span>
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                SMS Notifications
+                                {% if user.sms_notifications %}
+                                <span class="badge bg-success rounded-pill">Enabled</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-pill">Disabled</span>
+                                {% endif %}
+                            </li>
+                        </ul>
+                        <a href="{% url 'accounts:notification_settings' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-cog me-1"></i>Manage Notifications
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Security Settings</h6>
+                        <ul class="list-group mb-3">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Two-Factor Authentication
+                                {% if user.two_factor_enabled %}
+                                <span class="badge bg-success rounded-pill">Enabled</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-pill">Disabled</span>
+                                {% endif %}
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Password
+                                <span class="badge bg-primary rounded-pill">
+                                    {% if user.last_password_change %}
+                                    Last changed {{ user.last_password_change|date:"F j, Y" }}
+                                    {% else %}
+                                    Default
+                                    {% endif %}
+                                </span>
+                            </li>
+                        </ul>
+                        <a href="{% url 'accounts:security_settings' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-shield-alt me-1"></i>Manage Security
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Logged in</h6>
+                            <small>{{ user.last_login|date:"F j, Y H:i" }}</small>
+                        </div>
+                        <p class="mb-1">You logged in from {{ user.last_login_ip|default:"unknown location" }}</p>
+                    </div>
+                    <!-- More activity items would go here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

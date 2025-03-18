@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Model Drift Analysis{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Model Drift Analysis</h1>
+        <a href="{% url 'ml_engine:monitoring_dashboard' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to Monitoring
+        </a>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filters</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <div class="form-group mb-2 mr-2">
+                    <label for="model_id" class="mr-2">Model:</label>
+                    <select name="model_id" id="model_id" class="form-control">
+                        <option value="">All Models</option>
+                        {% for model in active_models %}
+                        <option value="{{ model.id }}" {% if model.id|stringformat:"i" == request.GET.model_id %}selected{% endif %}>
+                            {{ model.name }} v{{ model.version }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mb-2 mr-2">
+                    <label for="days" class="mr-2">Time Period:</label>
+                    <select name="days" id="days" class="form-control">
+                        <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                        <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                        <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary mb-2">Apply Filters</button>
+            </form>
+        </div>
+    </div>
+
+    {% if model %}
+    <!-- Single Model Drift Analysis -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Drift Analysis for {{ model.name }} v{{ model.version }}</h6>
+                </div>
+                <div class="card-body">
+                    {% if drift_metrics.error %}
+                    <div class="alert alert-danger">
+                        {{ drift_metrics.error }}
+                    </div>
+                    {% else %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">Drift Metrics</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered" width="100%" cellspacing="0">
+                                            <tbody>
+                                                <tr>
+                                                    <th>Baseline Avg Risk Score</th>
+                                                    <td>{{ drift_metrics.drift_metrics.baseline_avg_risk|floatformat:2 }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Current Avg Risk Score</th>
+                                                    <td>{{ drift_metrics.drift_metrics.current_avg_risk|floatformat:2 }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Absolute Drift</th>
+                                                    <td>{{ drift_metrics.drift_metrics.absolute_drift|floatformat:2 }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Relative Drift</th>
+                                                    <td>{{ drift_metrics.drift_metrics.relative_drift|floatformat:2 }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Z-Score</th>
+                                                    <td>{{ drift_metrics.drift_metrics.z_score|floatformat:2 }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Drift Detected</th>
+                                                    <td>
+                                                        {% if drift_metrics.drift_detected %}
+                                                        <span class="badge badge-danger">Yes</span>
+                                                        {% else %}
+                                                        <span class="badge badge-success">No</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">Risk Score Trend</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-area">
+                                        <canvas id="riskScoreTrendChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Multiple Models Drift Analysis -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Drift Analysis for All Models</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Baseline Risk Score</th>
+                                    <th>Current Risk Score</th>
+                                    <th>Absolute Drift</th>
+                                    <th>Relative Drift</th>
+                                    <th>Z-Score</th>
+                                    <th>Drift Detected</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in drift_results %}
+                                <tr>
+                                    <td>{{ result.model_name }} v{{ result.model_version }}</td>
+                                    <td>{{ result.drift_metrics.baseline_avg_risk|floatformat:2 }}</td>
+                                    <td>{{ result.drift_metrics.current_avg_risk|floatformat:2 }}</td>
+                                    <td>{{ result.drift_metrics.absolute_drift|floatformat:2 }}</td>
+                                    <td>{{ result.drift_metrics.relative_drift|floatformat:2 }}</td>
+                                    <td>{{ result.drift_metrics.z_score|floatformat:2 }}</td>
+                                    <td>
+                                        {% if result.drift_detected %}
+                                        <span class="badge badge-danger">Yes</span>
+                                        {% else %}
+                                        <span class="badge badge-success">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'ml_engine:model_drift' %}?model_id={{ result.model_id }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-search"></i> Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No drift data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if model and not drift_metrics.error %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Risk Score Trend Chart
+    var trendCtx = document.getElementById('riskScoreTrendChart').getContext('2d');
+    var riskScoreTrendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for metric in drift_metrics.daily_metrics %}
+                "{{ metric.day|date:'M d' }}",
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Avg Risk Score',
+                data: [
+                    {% for metric in drift_metrics.daily_metrics %}
+                    {{ metric.avg_risk_score|floatformat:2 }},
+                    {% endfor %}
+                ],
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                borderColor: 'rgba(78, 115, 223, 1)',
+                pointRadius: 3,
+                pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                pointBorderColor: 'rgba(78, 115, 223, 1)',
+                pointHoverRadius: 5,
+                pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
+                pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
+                pointHitRadius: 10,
+                pointBorderWidth: 2,
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Risk Score'
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+
+{% block title %}Rule Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Rule Details</h1>
+        <div>
+            <a href="{% url 'rule_engine:edit' rule_id=rule.id %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm mr-2">
+                <i class="fas fa-edit fa-sm text-white-50"></i> Edit Rule
+            </a>
+            <a href="{% url 'rule_engine:test' rule_id=rule.id %}" class="d-none d-sm-inline-block btn btn-sm btn-info shadow-sm mr-2">
+                <i class="fas fa-flask fa-sm text-white-50"></i> Test Rule
+            </a>
+            <form method="post" action="{% url 'rule_engine:toggle_active' rule_id=rule.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="d-none d-sm-inline-block btn btn-sm {% if rule.is_active %}btn-warning{% else %}btn-success{% endif %} shadow-sm mr-2">
+                    <i class="fas {% if rule.is_active %}fa-pause{% else %}fa-play{% endif %} fa-sm text-white-50"></i> 
+                    {% if rule.is_active %}Deactivate{% else %}Activate{% endif %}
+                </button>
+            </form>
+            <a href="{% url 'rule_engine:list' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+                <i class="fas fa-list fa-sm text-white-50"></i> All Rules
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Rule Information</h6>
+                    <div>
+                        <span class="badge badge-info">Version {{ rule.version }}</span>
+                        {% if rule.is_active %}
+                            <span class="badge badge-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>{{ rule.name }}</h5>
+                        <p class="text-muted">{{ rule.description }}</p>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Rule Type:</strong> {{ rule.get_rule_type_display }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Action:</strong> {{ rule.get_action_display }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Priority:</strong> {{ rule.priority }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Risk Score:</strong> {{ rule.risk_score }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Created By:</strong> {{ rule.created_by }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Last Modified By:</strong> {{ rule.last_modified_by|default:"N/A" }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Created At:</strong> {{ rule.created_at|date:"M d, Y H:i" }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Last Updated:</strong> {{ rule.updated_at|date:"M d, Y H:i" }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Last Triggered:</strong> {{ rule.last_triggered|date:"M d, Y H:i"|default:"Never" }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold">Condition</h6>
+                        <pre class="bg-light p-3 rounded"><code>{{ rule.condition }}</code></pre>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Applies to POS:</strong> {% if rule.applies_to_pos %}Yes{% else %}No{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Applies to E-commerce:</strong> {% if rule.applies_to_ecommerce %}Yes{% else %}No{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Applies to Wallet:</strong> {% if rule.applies_to_wallet %}Yes{% else %}No{% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold">Merchant-Specific Settings</h6>
+                        {% if rule.merchant_specific %}
+                            <p>This rule is merchant-specific.</p>
+                            
+                            {% if rule.included_merchants %}
+                                <div class="mb-2">
+                                    <strong>Included Merchants:</strong>
+                                    <div class="mt-1">
+                                        {% for merchant_id in rule.included_merchants %}
+                                            <span class="badge badge-primary mr-1">{{ merchant_id }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p>This rule applies to all merchants (except excluded ones).</p>
+                            {% endif %}
+                            
+                            {% if rule.excluded_merchants %}
+                                <div class="mb-2">
+                                    <strong>Excluded Merchants:</strong>
+                                    <div class="mt-1">
+                                        {% for merchant_id in rule.excluded_merchants %}
+                                            <span class="badge badge-danger mr-1">{{ merchant_id }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p>This rule applies to all merchants.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Rule Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <div class="h4 mb-0 font-weight-bold text-gray-800">{{ rule.hit_count }}</div>
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Hit Count</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <div class="h4 mb-0 font-weight-bold text-gray-800">{{ rule.false_positive_count }}</div>
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">False Positives</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="font-weight-bold">Execution Statistics</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="text-center">
+                                    <div class="h4 mb-0 font-weight-bold text-gray-800">{{ execution_stats.total|default:"0" }}</div>
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Executions</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-center">
+                                    <div class="h4 mb-0 font-weight-bold text-gray-800">{{ execution_stats.triggered|default:"0" }}</div>
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Triggered</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if execution_stats.total > 0 %}
+                        <div class="mb-3">
+                            <h6 class="font-weight-bold">Trigger Rate</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar" role="progressbar" style="width: {{ execution_stats.trigger_rate|floatformat:1 }}%"
+                                     aria-valuenow="{{ execution_stats.trigger_rate|floatformat:1 }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ execution_stats.trigger_rate|floatformat:1 }}%
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ execution_stats.triggered }} out of {{ execution_stats.total }} executions</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6 class="font-weight-bold">Execution Time</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ execution_stats.avg_execution_time|floatformat:2 }}ms</div>
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Avg</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ execution_stats.min_execution_time|floatformat:2 }}ms</div>
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Min</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ execution_stats.max_execution_time|floatformat:2 }}ms</div>
+                                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Max</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if rule_sets %}
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Rule Sets</h6>
+                    </div>
+                    <div class="card-body">
+                        <p>This rule is included in the following rule sets:</p>
+                        <ul class="list-group">
+                            {% for rule_set in rule_sets %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ rule_set.name }}
+                                    {% if rule_set.is_active %}
+                                        <span class="badge badge-success badge-pill">Active</span>
+                                    {% else %}
+                                        <span class="badge badge-danger badge-pill">Inactive</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Executions</h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_executions %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Transaction ID</th>
+                                        <th>Timestamp</th>
+                                        <th>Triggered</th>
+                                        <th>Execution Time</th>
+                                        <th>Condition Values</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for execution in recent_executions %}
+                                        <tr>
+                                            <td>{{ execution.transaction_id }}</td>
+                                            <td>{{ execution.created_at|date:"M d, Y H:i:s" }}</td>
+                                            <td>
+                                                {% if execution.triggered %}
+                                                    <span class="badge badge-success">Yes</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger">No</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ execution.execution_time|floatformat:2 }}ms</td>
+                                            <td>
+                                                {% if execution.condition_values %}
+                                                    <ul class="mb-0">
+                                                        {% for key, value in execution.condition_values.items %}
+                                                            <li><strong>{{ key }}:</strong> {{ value }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% else %}
+                                                    <em>No values recorded</em>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No executions recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

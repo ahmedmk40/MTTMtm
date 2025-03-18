@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction Details - {{ transaction.transaction_id }} - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard:index' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'transactions:list' %}">Transactions</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ transaction.transaction_id }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h2">Transaction Details</h1>
+                <div>
+                    <a href="{% url 'cases:create' %}?transaction_id={{ transaction.transaction_id }}" class="btn btn-primary me-2">
+                        <i class="bi bi-folder-plus me-1"></i>Create Case
+                    </a>
+                    {% if fraud_result %}
+                        {% if fraud_result.is_fraudulent %}
+                            <span class="badge bg-danger fs-6">Fraudulent</span>
+                        {% else %}
+                            <span class="badge bg-success fs-6">Legitimate</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Transaction Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Transaction ID:</strong></p>
+                        <p>{{ transaction.transaction_id }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Status:</strong></p>
+                        <p>
+                            {% if transaction.status == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                            {% elif transaction.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% elif transaction.status == 'flagged' %}
+                                <span class="badge bg-warning">Flagged</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ transaction.get_status_display }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Transaction Type:</strong></p>
+                        <p>{{ transaction.get_transaction_type_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Channel:</strong></p>
+                        <p>{{ transaction.get_channel_display }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Amount:</strong></p>
+                        <p>{{ transaction.amount }} {{ transaction.currency }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Timestamp:</strong></p>
+                        <p>{{ transaction.timestamp|date:"Y-m-d H:i:s" }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>User ID:</strong></p>
+                        <p>{{ transaction.user_id }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Device ID:</strong></p>
+                        <p>{{ transaction.device_id|default:"N/A" }}</p>
+                    </div>
+                </div>
+                {% if transaction.merchant_id %}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Merchant ID:</strong></p>
+                        <p>{{ transaction.merchant_id }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>MCC:</strong></p>
+                        <p>{{ transaction.mcc|default:"N/A" }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if transaction.channel == 'pos' %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">POS Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Terminal ID:</strong></p>
+                        <p>{{ transaction.terminal_id }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Entry Mode:</strong></p>
+                        <p>{{ transaction.get_entry_mode_display }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Terminal Type:</strong></p>
+                        <p>{{ transaction.terminal_type }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Attendance:</strong></p>
+                        <p>{{ transaction.get_attendance_display }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Condition:</strong></p>
+                        <p>{{ transaction.get_condition_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Recurring Payment:</strong></p>
+                        <p>{{ transaction.recurring_payment|yesno:"Yes,No" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% elif transaction.channel == 'ecommerce' %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">E-commerce Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Website URL:</strong></p>
+                        <p>{{ transaction.website_url|default:"N/A" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>3DS Verified:</strong></p>
+                        <p>{{ transaction.is_3ds_verified|yesno:"Yes,No" }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Device Fingerprint:</strong></p>
+                        <p>{{ transaction.device_fingerprint|default:"N/A" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Billing/Shipping Match:</strong></p>
+                        <p>{{ transaction.is_billing_shipping_match|yesno:"Yes,No" }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Recurring Payment:</strong></p>
+                        <p>{{ transaction.recurring_payment|yesno:"Yes,No" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% elif transaction.channel == 'wallet' %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Wallet Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Wallet ID:</strong></p>
+                        <p>{{ transaction.wallet_id }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Transaction Purpose:</strong></p>
+                        <p>{{ transaction.get_transaction_purpose_display }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Source Type:</strong></p>
+                        <p>{{ transaction.get_source_type_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Source ID:</strong></p>
+                        <p>{{ transaction.source_id }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Destination Type:</strong></p>
+                        <p>{{ transaction.get_destination_type_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Destination ID:</strong></p>
+                        <p>{{ transaction.destination_id }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Is Internal:</strong></p>
+                        <p>{{ transaction.is_internal|yesno:"Yes,No" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Location Data</h5>
+            </div>
+            <div class="card-body">
+                <pre class="mb-0">{{ transaction.location_data|pprint }}</pre>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Payment Method Data</h5>
+            </div>
+            <div class="card-body">
+                <pre class="mb-0">{{ transaction.payment_method_data|pprint }}</pre>
+            </div>
+        </div>
+
+        {% if transaction.metadata %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Metadata</h5>
+            </div>
+            <div class="card-body">
+                <pre class="mb-0">{{ transaction.metadata|pprint }}</pre>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Fraud Detection</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Risk Score:</strong></p>
+                    <div class="progress mb-2" style="height: 25px;">
+                        {% if transaction.risk_score %}
+                            <div class="progress-bar {% if transaction.risk_score >= 80 %}bg-danger{% elif transaction.risk_score >= 50 %}bg-warning{% else %}bg-success{% endif %}" 
+                                role="progressbar" 
+                                style="width: {{ transaction.risk_score }}%;" 
+                                aria-valuenow="{{ transaction.risk_score }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                                {{ transaction.risk_score }}
+                            </div>
+                        {% else %}
+                            <div class="progress-bar bg-secondary" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                N/A
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Flagged:</strong></p>
+                    <p>
+                        {% if transaction.is_flagged %}
+                            <span class="badge bg-warning">Yes</span>
+                        {% else %}
+                            <span class="badge bg-success">No</span>
+                        {% endif %}
+                    </p>
+                </div>
+                {% if transaction.flag_reason %}
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Flag Reason:</strong></p>
+                    <p>{{ transaction.flag_reason }}</p>
+                </div>
+                {% endif %}
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Review Status:</strong></p>
+                    <p>
+                        {% if transaction.review_status == 'pending' %}
+                            <span class="badge bg-warning">Pending Review</span>
+                        {% elif transaction.review_status == 'reviewed' %}
+                            <span class="badge bg-info">Reviewed</span>
+                        {% elif transaction.review_status == 'cleared' %}
+                            <span class="badge bg-success">Cleared</span>
+                        {% elif transaction.review_status == 'confirmed_fraud' %}
+                            <span class="badge bg-danger">Confirmed Fraud</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Not Reviewed</span>
+                        {% endif %}
+                    </p>
+                </div>
+                {% if transaction.reviewed_by %}
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Reviewed By:</strong></p>
+                    <p>{{ transaction.reviewed_by }}</p>
+                </div>
+                {% endif %}
+                {% if transaction.reviewed_at %}
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Reviewed At:</strong></p>
+                    <p>{{ transaction.reviewed_at|date:"Y-m-d H:i:s" }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if transaction.is_flagged %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Review Transaction</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ form.review_status.label_tag }}
+                        {{ form.review_status }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.notes.label_tag }}
+                        {{ form.notes }}
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Submit Review</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Transaction Timeline</h5>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Transaction Created</h6>
+                            <small>{{ transaction.created_at|date:"Y-m-d H:i:s" }}</small>
+                        </div>
+                        <p class="mb-1">Transaction was created in the system.</p>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Fraud Detection</h6>
+                            <small>{{ transaction.created_at|date:"Y-m-d H:i:s" }}</small>
+                        </div>
+                        <p class="mb-1">Transaction was processed by fraud detection system.</p>
+                        <small>Risk Score: {{ transaction.risk_score|default:"N/A" }}</small>
+                    </li>
+                    {% if transaction.is_flagged %}
+                    <li class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Transaction Flagged</h6>
+                            <small>{{ transaction.created_at|date:"Y-m-d H:i:s" }}</small>
+                        </div>
+                        <p class="mb-1">Transaction was flagged for review.</p>
+                        <small>Reason: {{ transaction.flag_reason }}</small>
+                    </li>
+                    {% endif %}
+                    {% if transaction.reviewed_at %}
+                    <li class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Transaction Reviewed</h6>
+                            <small>{{ transaction.reviewed_at|date:"Y-m-d H:i:s" }}</small>
+                        </div>
+                        <p class="mb-1">Transaction was reviewed by {{ transaction.reviewed_by }}.</p>
+                        <small>Status: {{ transaction.get_review_status_display }}</small>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

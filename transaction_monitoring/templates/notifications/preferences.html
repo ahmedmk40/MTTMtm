@@ -1,0 +1,138 @@
+{% extends "base_rbac.html" %}
+{% load notification_tags %}
+
+{% block title %}Notification Preferences | Transaction Monitoring System{% endblock %}
+
+{% block page_title %}Notification Preferences{% endblock %}
+
+{% block page_actions %}
+<div class="btn-toolbar mb-2 mb-md-0">
+    <a href="{% url 'notifications:list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to Notifications
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Notification Preferences</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <h5>Email Notifications</h5>
+                            <p class="text-muted small">Configure which notifications you receive via email.</p>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="email_fraud_alerts" name="email_fraud_alerts" {% if preferences.email_fraud_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="email_fraud_alerts">Fraud Alerts</label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="email_aml_alerts" name="email_aml_alerts" {% if preferences.email_aml_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="email_aml_alerts">AML Alerts</label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="email_case_updates" name="email_case_updates" {% if preferences.email_case_updates %}checked{% endif %}>
+                                <label class="form-check-label" for="email_case_updates">Case Updates</label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="email_system_notifications" name="email_system_notifications" {% if preferences.email_system_notifications %}checked{% endif %}>
+                                <label class="form-check-label" for="email_system_notifications">System Notifications</label>
+                            </div>
+                            
+                            <div class="mb-3 mt-3">
+                                <label for="min_priority_for_email" class="form-label">Minimum Priority for Email</label>
+                                <select class="form-select" id="min_priority_for_email" name="min_priority_for_email">
+                                    {% for priority_code, priority_name in priority_choices %}
+                                    <option value="{{ priority_code }}" {% if preferences.min_priority_for_email == priority_code %}selected{% endif %}>
+                                        {{ priority_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">You will only receive email notifications for items with this priority or higher.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h5>In-App Notifications</h5>
+                            <p class="text-muted small">Configure which notifications you see in the application.</p>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="in_app_fraud_alerts" name="in_app_fraud_alerts" {% if preferences.in_app_fraud_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="in_app_fraud_alerts">Fraud Alerts</label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="in_app_aml_alerts" name="in_app_aml_alerts" {% if preferences.in_app_aml_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="in_app_aml_alerts">AML Alerts</label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="in_app_case_updates" name="in_app_case_updates" {% if preferences.in_app_case_updates %}checked{% endif %}>
+                                <label class="form-check-label" for="in_app_case_updates">Case Updates</label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="in_app_rule_triggers" name="in_app_rule_triggers" {% if preferences.in_app_rule_triggers %}checked{% endif %}>
+                                <label class="form-check-label" for="in_app_rule_triggers">Rule Triggers</label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="in_app_system_notifications" name="in_app_system_notifications" {% if preferences.in_app_system_notifications %}checked{% endif %}>
+                                <label class="form-check-label" for="in_app_system_notifications">System Notifications</label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h5>SMS Notifications</h5>
+                            <p class="text-muted small">Configure which notifications you receive via SMS.</p>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="sms_fraud_alerts" name="sms_fraud_alerts" {% if preferences.sms_fraud_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="sms_fraud_alerts">Fraud Alerts</label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="sms_aml_alerts" name="sms_aml_alerts" {% if preferences.sms_aml_alerts %}checked{% endif %}>
+                                <label class="form-check-label" for="sms_aml_alerts">AML Alerts</label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="sms_case_updates" name="sms_case_updates" {% if preferences.sms_case_updates %}checked{% endif %}>
+                                <label class="form-check-label" for="sms_case_updates">Case Updates</label>
+                            </div>
+                            
+                            <div class="mb-3 mt-3">
+                                <label for="min_priority_for_sms" class="form-label">Minimum Priority for SMS</label>
+                                <select class="form-select" id="min_priority_for_sms" name="min_priority_for_sms">
+                                    {% for priority_code, priority_name in priority_choices %}
+                                    <option value="{{ priority_code }}" {% if preferences.min_priority_for_sms == priority_code %}selected{% endif %}>
+                                        {{ priority_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">You will only receive SMS notifications for items with this priority or higher.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save Preferences
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

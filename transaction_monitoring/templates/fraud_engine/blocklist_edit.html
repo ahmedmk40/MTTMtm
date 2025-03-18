@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Blocklist Entry - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'fraud_engine:dashboard' %}">Fraud Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'fraud_engine:blocklist' %}">Blocklist</a></li>
+                    <li class="breadcrumb-item active">Edit Entry</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Edit Blocklist Entry</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Blocklist Entry Information</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-group row">
+                            <div class="col-md-6">
+                                <label>Entity Type</label>
+                                <input type="text" class="form-control" value="{{ entry.get_entity_type_display }}" readonly>
+                                <small class="form-text text-muted">Entity type cannot be changed.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label>Entity Value</label>
+                                <input type="text" class="form-control" value="{% if entry.entity_type == 'card_number' %}MASKED{% else %}{{ entry.entity_value }}{% endif %}" readonly>
+                                <small class="form-text text-muted">Entity value cannot be changed.</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reason">Reason <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="reason" name="reason" rows="3" required>{{ entry.reason }}</textarea>
+                            <small class="form-text text-muted">Provide a reason for blocking this entity.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="expires_at">Expiration Date/Time (Optional)</label>
+                            <input type="datetime-local" class="form-control" id="expires_at" name="expires_at" value="{% if entry.expires_at %}{{ entry.expires_at|date:'Y-m-d\TH:i' }}{% endif %}">
+                            <small class="form-text text-muted">If left blank, the blocklist entry will never expire.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" {% if entry.is_active %}checked{% endif %}>
+                                <label class="custom-control-label" for="is_active">Active</label>
+                            </div>
+                            <small class="form-text text-muted">If unchecked, this entry will be inactive and won't block transactions.</small>
+                        </div>
+                        
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save mr-2"></i> Save Changes
+                            </button>
+                            <a href="{% url 'fraud_engine:blocklist' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times mr-2"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Entry Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Created:</strong> {{ entry.created_at|date:"F d, Y H:i" }}</p>
+                            <p><strong>Last Updated:</strong> {{ entry.updated_at|date:"F d, Y H:i" }}</p>
+                            <p><strong>Added By:</strong> {{ entry.added_by }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <p class="mb-0">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    Note: You cannot change the entity type or value. If you need to block a different entity, please create a new blocklist entry.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

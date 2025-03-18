@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Blocklist Management - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'fraud_engine:dashboard' %}">Fraud Engine</a></li>
+                    <li class="breadcrumb-item active">Blocklist</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2 mb-0">Blocklist Management</h1>
+                <a href="{% url 'fraud_engine:blocklist_add' %}" class="btn btn-primary">
+                    <i class="fas fa-plus mr-2"></i> Add to Blocklist
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="form-inline">
+                        <div class="form-group mb-2 mr-3">
+                            <label for="entity_type" class="mr-2">Entity Type:</label>
+                            <select name="entity_type" id="entity_type" class="form-control">
+                                <option value="">All Types</option>
+                                {% for type_code, type_name in entity_types %}
+                                <option value="{{ type_code }}" {% if filter_entity_type == type_code %}selected{% endif %}>{{ type_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group mb-2 mr-3">
+                            <label for="is_active" class="mr-2">Status:</label>
+                            <select name="is_active" id="is_active" class="form-control">
+                                <option value="">All</option>
+                                <option value="true" {% if filter_is_active == 'true' %}selected{% endif %}>Active</option>
+                                <option value="false" {% if filter_is_active == 'false' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-2 mr-3">
+                            <label for="q" class="mr-2">Search:</label>
+                            <input type="text" name="q" id="q" class="form-control" value="{{ search_query }}" placeholder="Search...">
+                        </div>
+                        <button type="submit" class="btn btn-primary mb-2">Apply Filters</button>
+                        <a href="{% url 'fraud_engine:blocklist' %}" class="btn btn-secondary mb-2 ml-2">Clear Filters</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Blocklist Table -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Blocklist Entries</h6>
+                </div>
+                <div class="card-body">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Entity Type</th>
+                                        <th>Entity Value</th>
+                                        <th>Reason</th>
+                                        <th>Status</th>
+                                        <th>Added By</th>
+                                        <th>Added On</th>
+                                        <th>Expires</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in page_obj %}
+                                    <tr>
+                                        <td>{{ entry.get_entity_type_display }}</td>
+                                        <td>
+                                            {% if entry.entity_type == 'card_number' %}
+                                                <span class="text-muted">MASKED</span>
+                                            {% else %}
+                                                {{ entry.entity_value }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ entry.reason }}</td>
+                                        <td>
+                                            {% if entry.is_active %}
+                                                {% if entry.expires_at and entry.expires_at < now %}
+                                                    <span class="badge badge-secondary">Expired</span>
+                                                {% else %}
+                                                    <span class="badge badge-success">Active</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge badge-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ entry.added_by }}</td>
+                                        <td>{{ entry.created_at|date:"M d, Y H:i" }}</td>
+                                        <td>
+                                            {% if entry.expires_at %}
+                                                {{ entry.expires_at|date:"M d, Y H:i" }}
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'fraud_engine:blocklist_edit' entry.id %}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'fraud_engine:blocklist_delete' entry.id %}" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        {% if page_obj.has_other_pages %}
+                        <div class="pagination justify-content-center mt-4">
+                            <ul class="pagination">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% if filter_entity_type %}&entity_type={{ filter_entity_type }}{% endif %}{% if filter_is_active %}&is_active={{ filter_is_active }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" aria-label="First">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filter_entity_type %}&entity_type={{ filter_entity_type }}{% endif %}{% if filter_is_active %}&is_active={{ filter_is_active }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% if filter_entity_type %}&entity_type={{ filter_entity_type }}{% endif %}{% if filter_is_active %}&is_active={{ filter_is_active }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">{{ num }}</a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filter_entity_type %}&entity_type={{ filter_entity_type }}{% endif %}{% if filter_is_active %}&is_active={{ filter_is_active }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if filter_entity_type %}&entity_type={{ filter_entity_type }}{% endif %}{% if filter_is_active %}&is_active={{ filter_is_active }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" aria-label="Last">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            No blocklist entries found matching your criteria.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

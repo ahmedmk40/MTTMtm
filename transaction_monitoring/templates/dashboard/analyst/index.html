@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+
+{% block title %}Fraud Analyst Dashboard - Transaction Monitoring System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1>Fraud Analyst Dashboard</h1>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-4">
+        <div class="card stat-card h-100 bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50">Total Transactions</h6>
+                        <h2 class="display-4 mb-0">{{ transaction_count }}</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                </div>
+                <p class="card-text mt-3">Last 30 days</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card stat-card h-100 bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50">Flagged Transactions</h6>
+                        <h2 class="display-4 mb-0">{{ flagged_count }}</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-flag"></i>
+                    </div>
+                </div>
+                <p class="card-text mt-3">Requiring review</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card stat-card h-100 bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white-50">Fraud Cases</h6>
+                        <h2 class="display-4 mb-0">{{ case_count }}</h2>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+                <p class="card-text mt-3">Open cases</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Transactions by Status</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="transactionStatusChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Transactions by Channel</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="transactionChannelChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Flagged Transactions</h5>
+                <a href="{% url 'transactions:list' %}?is_flagged=1" class="btn btn-sm btn-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Amount</th>
+                                <th>Channel</th>
+                                <th>Risk Score</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in flagged_transactions %}
+                            <tr>
+                                <td>{{ transaction.transaction_id }}</td>
+                                <td>{{ transaction.amount }} {{ transaction.currency }}</td>
+                                <td>{{ transaction.get_channel_display }}</td>
+                                <td>
+                                    {% if transaction.risk_score %}
+                                        {% if transaction.risk_score >= 80 %}
+                                            <span class="badge bg-danger">{{ transaction.risk_score }}</span>
+                                        {% elif transaction.risk_score >= 50 %}
+                                            <span class="badge bg-warning">{{ transaction.risk_score }}</span>
+                                        {% else %}
+                                            <span class="badge bg-success">{{ transaction.risk_score }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'transactions:detail' transaction.transaction_id %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-3">No flagged transactions found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Recent Fraud Cases</h5>
+                <a href="{% url 'cases:list' %}" class="btn btn-sm btn-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Case ID</th>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for case in recent_cases %}
+                            <tr>
+                                <td>{{ case.case_id }}</td>
+                                <td>{{ case.title }}</td>
+                                <td>
+                                    {% if case.status == 'open' %}
+                                        <span class="badge bg-danger">Open</span>
+                                    {% elif case.status == 'investigating' %}
+                                        <span class="badge bg-warning">Investigating</span>
+                                    {% elif case.status == 'resolved' %}
+                                        <span class="badge bg-success">Resolved</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ case.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if case.priority == 'critical' %}
+                                        <span class="badge bg-danger">Critical</span>
+                                    {% elif case.priority == 'high' %}
+                                        <span class="badge bg-warning">High</span>
+                                    {% elif case.priority == 'medium' %}
+                                        <span class="badge bg-info">Medium</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ case.get_priority_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'cases:detail' case.case_id %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-3">No fraud cases found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Transaction Status Chart
+        var statusCtx = document.getElementById('transactionStatusChart').getContext('2d');
+        var statusData = {
+            labels: [
+                {% for item in transaction_status_counts %}
+                    '{{ item.status|capfirst }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for item in transaction_status_counts %}
+                        {{ item.count }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#28a745',  // success/approved
+                    '#dc3545',  // danger/rejected
+                    '#ffc107',  // warning/flagged
+                    '#6c757d',  // secondary/pending
+                ],
+                borderWidth: 1
+            }]
+        };
+        var statusChart = new Chart(statusCtx, {
+            type: 'pie',
+            data: statusData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+
+        // Transaction Channel Chart
+        var channelCtx = document.getElementById('transactionChannelChart').getContext('2d');
+        var channelData = {
+            labels: [
+                {% for item in transaction_channel_counts %}
+                    '{{ item.channel|capfirst }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for item in transaction_channel_counts %}
+                        {{ item.count }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#007bff',  // primary/pos
+                    '#6f42c1',  // purple/ecommerce
+                    '#20c997',  // teal/wallet
+                ],
+                borderWidth: 1
+            }]
+        };
+        var channelChart = new Chart(channelCtx, {
+            type: 'doughnut',
+            data: channelData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

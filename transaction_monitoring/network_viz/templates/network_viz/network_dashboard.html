@@ -1,0 +1,1521 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Transaction Network{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Enhanced Network Visualization Styles */
+    #network-container {
+        width: 100%;
+        height: 600px;
+        border: 1px solid #e3e6f0;
+        border-radius: 8px;
+        background-color: #f8f9fc;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        overflow: hidden;
+    }
+    
+    .network-legend {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 15px;
+        padding: 10px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 0.15rem 0.5rem rgba(58, 59, 69, 0.10);
+        background-color: #fff;
+    }
+    
+    .legend-item {
+        display: inline-block;
+        margin-right: 20px;
+    }
+    
+    .legend-color {
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        margin-right: 5px;
+        border-radius: 50%;
+        vertical-align: middle;
+    }
+    
+    .user-color { background-color: #4e73df; }
+    .merchant-color { background-color: #1cc88a; }
+    .high-risk-color { background-color: #e74a3b; }
+    .medium-risk-color { background-color: #f6c23e; }
+    .low-risk-color { background-color: #36b9cc; }
+    .edge-normal-color { background-color: #aaa; }
+    .edge-flagged-color { background-color: #e74a3b; }
+    
+    .network-controls {
+        margin-bottom: 15px;
+    }
+    
+    .network-stats {
+        margin-top: 15px;
+    }
+    
+    .pattern-card {
+        margin-bottom: 15px;
+    }
+    
+    .pattern-icon {
+        font-size: 2rem;
+        margin-right: 10px;
+    }
+    
+    .high-volume-user-icon { color: #4e73df; }
+    .high-flag-merchant-icon { color: #e74a3b; }
+    .high-risk-connection-icon { color: #f6c23e; }
+    
+    /* Network Tooltip Styles */
+    .network-tooltip {
+        max-width: 300px;
+        background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        padding: 0;
+        font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .network-tooltip .tooltip-header {
+        background-color: #4e73df;
+        color: white;
+        padding: 8px 12px;
+        font-weight: bold;
+        font-size: 14px;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+    }
+    
+    .network-tooltip .tooltip-content {
+        padding: 10px 12px;
+        color: #5a5c69;
+        font-size: 13px;
+    }
+    
+    .network-tooltip .tooltip-content p {
+        margin: 5px 0;
+        line-height: 1.4;
+    }
+    
+    .network-tooltip .tooltip-content strong {
+        color: #3a3b45;
+        font-weight: 600;
+    }
+    
+    /* Vis.js Network Customizations */
+    .vis-network:focus {
+        outline: none;
+    }
+    
+    .vis-navigation {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+    }
+    
+    .vis-button {
+        background-color: white !important;
+        border-radius: 4px !important;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .vis-button:hover {
+        background-color: #f8f9fc !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Transaction Network Visualization</h1>
+        <div>
+            <a href="{% url 'transactions:list' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+                <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to Transactions
+            </a>
+        </div>
+    </div>
+
+    <!-- Network Controls -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Network Controls</h6>
+        </div>
+        <div class="card-body">
+            <form id="network-filter-form">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <label for="days" class="form-label">Time Period:</label>
+                        <select name="days" id="days" class="form-control">
+                            <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                            <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                            <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="min_transactions" class="form-label">Min Transactions:</label>
+                        <input type="number" name="min_transactions" id="min_transactions" class="form-control" 
+                               value="{{ min_transactions }}" min="1" max="10">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="max_nodes" class="form-label">Max Nodes:</label>
+                        <input type="number" name="max_nodes" id="max_nodes" class="form-control" 
+                               value="{{ max_nodes }}" min="10" max="200">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="filter_type" class="form-label">Filter Type:</label>
+                        <select name="filter_type" id="filter_type" class="form-control">
+                            <option value="all" {% if filter_type == 'all' %}selected{% endif %}>All Transactions</option>
+                            <option value="flagged" {% if filter_type == 'flagged' %}selected{% endif %}>Flagged Only</option>
+                            <option value="high_risk" {% if filter_type == 'high_risk' %}selected{% endif %}>High Risk Only</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-3 mb-2">
+                        <label for="layout" class="form-label">Network Layout:</label>
+                        <select name="layout" id="layout" class="form-control">
+                            <option value="force" {% if layout == 'force' %}selected{% endif %}>Force-Directed</option>
+                            <option value="circular" {% if layout == 'circular' %}selected{% endif %}>Circular</option>
+                            <option value="hierarchical" {% if layout == 'hierarchical' %}selected{% endif %}>Hierarchical</option>
+                            <option value="radial" {% if layout == 'radial' %}selected{% endif %}>Radial</option>
+                            <option value="grid" {% if layout == 'grid' %}selected{% endif %}>Grid</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="node_size" class="form-label">Node Size By:</label>
+                        <select name="node_size" id="node_size" class="form-control">
+                            <option value="transactions">Transaction Count</option>
+                            <option value="amount">Transaction Amount</option>
+                            <option value="risk">Risk Score</option>
+                            <option value="centrality">Centrality</option>
+                            <option value="flagged">Flagged Count</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="node_color" class="form-label">Node Color By:</label>
+                        <select name="node_color" id="node_color" class="form-control">
+                            <option value="type">Node Type</option>
+                            <option value="risk">Risk Level</option>
+                            <option value="centrality">Centrality</option>
+                            <option value="community">Community</option>
+                            <option value="activity">Activity Level</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-3 mb-2">
+                        <label for="edge_width" class="form-label">Edge Width By:</label>
+                        <select name="edge_width" id="edge_width" class="form-control">
+                            <option value="transactions">Transaction Count</option>
+                            <option value="amount">Transaction Amount</option>
+                            <option value="risk">Risk Score</option>
+                            <option value="fixed">Fixed Width</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="edge_color" class="form-label">Edge Color By:</label>
+                        <select name="edge_color" id="edge_color" class="form-control">
+                            <option value="flagged">Flagged Status</option>
+                            <option value="risk">Risk Level</option>
+                            <option value="amount">Amount Range</option>
+                            <option value="gradient">Source-Target Gradient</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="clustering" class="form-label">Clustering Method:</label>
+                        <select name="clustering" id="clustering" class="form-control">
+                            <option value="none">None</option>
+                            <option value="risk">By Risk Level</option>
+                            <option value="type">By Node Type</option>
+                            <option value="community">By Community</option>
+                            <option value="activity">By Activity Level</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label for="physics_strength" class="form-label">Physics Strength:</label>
+                        <select name="physics_strength" id="physics_strength" class="form-control">
+                            <option value="strong">Strong</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="weak">Weak</option>
+                            <option value="none">None</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Network Visualization -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Transaction Network</h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                            aria-labelledby="dropdownMenuLink">
+                            <div class="dropdown-header">Network Options:</div>
+                            <a class="dropdown-item" href="#" id="zoom-to-fit">Zoom to Fit</a>
+                            <a class="dropdown-item" href="#" id="toggle-physics">Toggle Physics</a>
+                            <a class="dropdown-item" href="#" id="toggle-labels">Toggle Labels</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" id="highlight-high-risk">Highlight High Risk</a>
+                            <a class="dropdown-item" href="#" id="highlight-flagged">Highlight Flagged</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" id="download-image">Download Image</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="network-container"></div>
+                    
+                    <div class="network-legend mt-3">
+                        <div class="legend-item">
+                            <span class="legend-color user-color"></span> User
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color merchant-color"></span> Merchant
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color high-risk-color"></span> High Risk
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color medium-risk-color"></span> Medium Risk
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color low-risk-color"></span> Low Risk
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color edge-normal-color"></span> Normal Transaction
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color edge-flagged-color"></span> Flagged Transaction
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Transaction Time Series -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Transaction Volume Over Time</h6>
+                </div>
+                <div class="card-body">
+                    <div id="time-series-chart" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Network Stats and Patterns -->
+        <div class="col-lg-4">
+            <!-- Network Stats -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Network Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div id="network-stats">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <p>Loading network statistics...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Risk Heat Map -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Risk Heat Map</h6>
+                </div>
+                <div class="card-body">
+                    <div id="risk-heatmap" style="height: 300px;"></div>
+                </div>
+            </div>
+            
+            <!-- Unusual Patterns -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Unusual Patterns</h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="patternDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-filter fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="patternDropdown">
+                            <div class="dropdown-header">Filter Patterns:</div>
+                            <a class="dropdown-item {% if pattern_type == 'all' %}active{% endif %}" href="?days={{ days }}&min_transactions={{ min_transactions }}&max_nodes={{ max_nodes }}&filter_type={{ filter_type }}&layout={{ layout }}&pattern_type=all">
+                                All Patterns <span class="badge badge-primary">{{ pattern_counts.all }}</span>
+                            </a>
+                            <a class="dropdown-item {% if pattern_type == 'high_volume_user' %}active{% endif %}" href="?days={{ days }}&min_transactions={{ min_transactions }}&max_nodes={{ max_nodes }}&filter_type={{ filter_type }}&layout={{ layout }}&pattern_type=high_volume_user">
+                                High Volume Users <span class="badge badge-info">{{ pattern_counts.high_volume_user }}</span>
+                            </a>
+                            <a class="dropdown-item {% if pattern_type == 'high_flag_merchant' %}active{% endif %}" href="?days={{ days }}&min_transactions={{ min_transactions }}&max_nodes={{ max_nodes }}&filter_type={{ filter_type }}&layout={{ layout }}&pattern_type=high_flag_merchant">
+                                High-Risk Merchants <span class="badge badge-danger">{{ pattern_counts.high_flag_merchant }}</span>
+                            </a>
+                            <a class="dropdown-item {% if pattern_type == 'high_amount_transaction' %}active{% endif %}" href="?days={{ days }}&min_transactions={{ min_transactions }}&max_nodes={{ max_nodes }}&filter_type={{ filter_type }}&layout={{ layout }}&pattern_type=high_amount_transaction">
+                                High Amount Transactions <span class="badge badge-warning">{{ pattern_counts.high_amount_transaction }}</span>
+                            </a>
+                            <a class="dropdown-item {% if pattern_type == 'velocity_pattern' %}active{% endif %}" href="?days={{ days }}&min_transactions={{ min_transactions }}&max_nodes={{ max_nodes }}&filter_type={{ filter_type }}&layout={{ layout }}&pattern_type=velocity_pattern">
+                                Velocity Patterns <span class="badge badge-success">{{ pattern_counts.velocity_pattern }}</span>
+                            </a>
+                            <a class="dropdown-item {% if pattern_type == 'ml_high_risk' %}active{% endif %}" href="?days={{ days }}&min_transactions={{ min_transactions }}&max_nodes={{ max_nodes }}&filter_type={{ filter_type }}&layout={{ layout }}&pattern_type=ml_high_risk">
+                                ML High Risk <span class="badge badge-dark">{{ pattern_counts.ml_high_risk }}</span>
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-header">Filter by Severity:</div>
+                            <a class="dropdown-item" href="#" data-severity="high">
+                                High Severity <span class="badge badge-danger">{{ severity_counts.high }}</span>
+                            </a>
+                            <a class="dropdown-item" href="#" data-severity="medium">
+                                Medium Severity <span class="badge badge-warning">{{ severity_counts.medium }}</span>
+                            </a>
+                            <a class="dropdown-item" href="#" data-severity="low">
+                                Low Severity <span class="badge badge-success">{{ severity_counts.low }}</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="patterns-container">
+                        {% if patterns %}
+                            {% for pattern in patterns %}
+                                <div class="pattern-card severity-{{ pattern.severity|default:'low' }}">
+                                    <div class="d-flex">
+                                        {% if pattern.type == 'high_volume_user' %}
+                                            <div class="pattern-icon high-volume-user-icon">
+                                                <i class="fas fa-user-clock"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="font-weight-bold mb-0">High Volume User</h6>
+                                                    <span class="badge badge-{{ pattern.severity|default:'secondary' }}">{{ pattern.severity|default:'low'|upper }}</span>
+                                                </div>
+                                                <p class="mb-1">{{ pattern.description }}</p>
+                                                <div class="small text-muted">
+                                                    <span class="mr-3"><i class="fas fa-exchange-alt mr-1"></i> {{ pattern.transaction_count }}</span>
+                                                    <span class="mr-3"><i class="fas fa-dollar-sign mr-1"></i> ${{ pattern.total_amount|floatformat:2 }}</span>
+                                                    <span><i class="fas fa-flag mr-1"></i> {{ pattern.flagged_count }}</span>
+                                                </div>
+                                            </div>
+                                        {% elif pattern.type == 'high_flag_merchant' %}
+                                            <div class="pattern-icon high-flag-merchant-icon">
+                                                <i class="fas fa-store-alt-slash"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="font-weight-bold mb-0">High-Risk Merchant</h6>
+                                                    <span class="badge badge-{{ pattern.severity|default:'secondary' }}">{{ pattern.severity|default:'low'|upper }}</span>
+                                                </div>
+                                                <p class="mb-1">{{ pattern.description }}</p>
+                                                <div class="small text-muted">
+                                                    <span class="mr-3"><i class="fas fa-exchange-alt mr-1"></i> {{ pattern.transaction_count }}</span>
+                                                    <span class="mr-3"><i class="fas fa-dollar-sign mr-1"></i> ${{ pattern.total_amount|floatformat:2 }}</span>
+                                                    <span><i class="fas fa-flag mr-1"></i> {{ pattern.flagged_count }}</span>
+                                                </div>
+                                            </div>
+                                        {% elif pattern.type == 'high_amount_transaction' %}
+                                            <div class="pattern-icon high-risk-connection-icon">
+                                                <i class="fas fa-dollar-sign"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="font-weight-bold mb-0">High Amount Transaction</h6>
+                                                    <span class="badge badge-{{ pattern.severity|default:'secondary' }}">{{ pattern.severity|default:'low'|upper }}</span>
+                                                </div>
+                                                <p class="mb-1">{{ pattern.description }}</p>
+                                                <div class="small text-muted">
+                                                    <span class="mr-3"><i class="fas fa-dollar-sign mr-1"></i> ${{ pattern.amount|floatformat:2 }}</span>
+                                                    {% if pattern.risk_score %}
+                                                    <span class="mr-3"><i class="fas fa-chart-line mr-1"></i> Risk: {{ pattern.risk_score|floatformat:1 }}</span>
+                                                    {% endif %}
+                                                    <span><i class="fas fa-flag mr-1"></i> {{ pattern.is_flagged|yesno:"Flagged,Not Flagged" }}</span>
+                                                </div>
+                                            </div>
+                                        {% elif pattern.type == 'velocity_pattern' %}
+                                            <div class="pattern-icon velocity-pattern-icon">
+                                                <i class="fas fa-bolt"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="font-weight-bold mb-0">Velocity Pattern</h6>
+                                                    <span class="badge badge-{{ pattern.severity|default:'secondary' }}">{{ pattern.severity|default:'low'|upper }}</span>
+                                                </div>
+                                                <p class="mb-1">{{ pattern.description }}</p>
+                                                <div class="small text-muted">
+                                                    <span class="mr-3"><i class="fas fa-exchange-alt mr-1"></i> {{ pattern.transaction_count }}</span>
+                                                    <span class="mr-3"><i class="fas fa-dollar-sign mr-1"></i> ${{ pattern.total_amount|floatformat:2 }}</span>
+                                                    <span><i class="fas fa-clock mr-1"></i> {{ pattern.time_window }}</span>
+                                                </div>
+                                            </div>
+                                        {% elif pattern.type == 'ml_high_risk' %}
+                                            <div class="pattern-icon ml-high-risk-icon">
+                                                <i class="fas fa-brain"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="font-weight-bold mb-0">ML High Risk</h6>
+                                                    <span class="badge badge-{{ pattern.severity|default:'secondary' }}">{{ pattern.severity|default:'low'|upper }}</span>
+                                                </div>
+                                                <p class="mb-1">{{ pattern.description }}</p>
+                                                <div class="small text-muted">
+                                                    <span class="mr-3"><i class="fas fa-dollar-sign mr-1"></i> ${{ pattern.amount|floatformat:2 }}</span>
+                                                    <span><i class="fas fa-chart-line mr-1"></i> Risk: {{ pattern.risk_score|floatformat:1 }}</span>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <hr class="my-2">
+                                </div>
+                            {% endfor %}
+                            
+                            <!-- Pagination -->
+                            {% if patterns.has_other_pages %}
+                            <div class="pagination-container mt-4">
+                                <nav aria-label="Pattern pagination">
+                                    <ul class="pagination justify-content-center">
+                                        {% if patterns.has_previous %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?days={{ days }}&min_transactions={{ min_transactions }}&max_nodes={{ max_nodes }}&filter_type={{ filter_type }}&layout={{ layout }}&pattern_type={{ pattern_type }}&page={{ patterns.previous_page_number }}" aria-label="Previous">
+                                                    <span aria-hidden="true">&laquo;</span>
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item disabled">
+                                                <a class="page-link" href="#" aria-label="Previous">
+                                                    <span aria-hidden="true">&laquo;</span>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        
+                                        {% for i in patterns.paginator.page_range %}
+                                            {% if patterns.number == i %}
+                                                <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                                            {% else %}
+                                                <li class="page-item"><a class="page-link" href="?days={{ days }}&min_transactions={{ min_transactions }}&max_nodes={{ max_nodes }}&filter_type={{ filter_type }}&layout={{ layout }}&pattern_type={{ pattern_type }}&page={{ i }}">{{ i }}</a></li>
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% if patterns.has_next %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?days={{ days }}&min_transactions={{ min_transactions }}&max_nodes={{ max_nodes }}&filter_type={{ filter_type }}&layout={{ layout }}&pattern_type={{ pattern_type }}&page={{ patterns.next_page_number }}" aria-label="Next">
+                                                    <span aria-hidden="true">&raquo;</span>
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item disabled">
+                                                <a class="page-link" href="#" aria-label="Next">
+                                                    <span aria-hidden="true">&raquo;</span>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                                <p class="text-center text-muted small">
+                                    Showing {{ patterns.start_index }} to {{ patterns.end_index }} of {{ patterns.paginator.count }} patterns
+                                </p>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle mr-2"></i> No unusual patterns detected.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Community Analysis -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Community Analysis</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div id="community-chart" style="height: 300px;"></div>
+                </div>
+                <div class="col-md-6">
+                    <div id="centrality-chart" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+    #centrality-chart {
+        border-radius: 8px;
+        background-color: #fff;
+        padding: 10px;
+    }
+</style>
+
+{% block extra_js %}
+<!-- Vis.js Network Visualization Library -->
+<script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.2/dist/vis-network.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.1.1/dist/chartjs-chart-matrix.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script>
+    // Network visualization
+    let network = null;
+    let networkData = null;
+    let physicsEnabled = true;
+    
+    // Load network data
+    function loadNetworkData() {
+        // Get all visualization options from form
+        const days = document.getElementById('days').value;
+        const minTransactions = document.getElementById('min_transactions').value;
+        const maxNodes = document.getElementById('max_nodes').value;
+        const filterType = document.getElementById('filter_type')?.value || 'all';
+        const layout = document.getElementById('layout')?.value || 'force';
+        const nodeSize = document.getElementById('node_size')?.value || 'transactions';
+        const nodeColor = document.getElementById('node_color')?.value || 'type';
+        const edgeWidth = document.getElementById('edge_width')?.value || 'transactions';
+        const edgeColor = document.getElementById('edge_color')?.value || 'flagged';
+        const clustering = document.getElementById('clustering')?.value || 'none';
+        const physicsStrength = document.getElementById('physics_strength')?.value || 'medium';
+        
+        // Show loading spinner
+        document.getElementById('network-container').innerHTML = `
+            <div class="text-center" style="padding-top: 250px;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading network data...</p>
+            </div>
+        `;
+        
+        // Show loading spinners for other visualizations
+        document.getElementById('network-stats').innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p>Loading statistics...</p>
+            </div>
+        `;
+        
+        if (document.getElementById('time-series-chart')) {
+            document.getElementById('time-series-chart').innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p>Loading time series data...</p>
+                </div>
+            `;
+        }
+        
+        if (document.getElementById('risk-heatmap')) {
+            document.getElementById('risk-heatmap').innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p>Loading risk heatmap...</p>
+                </div>
+            `;
+        }
+        
+        if (document.getElementById('community-chart')) {
+            document.getElementById('community-chart').innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p>Loading community analysis...</p>
+                </div>
+            `;
+        }
+        
+        if (document.getElementById('centrality-chart')) {
+            document.getElementById('centrality-chart').innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p>Loading centrality analysis...</p>
+                </div>
+            `;
+        }
+        
+        // Build URL with all visualization parameters
+        const url = `{% url 'transactions:network_data' %}?days=${days}&min_transactions=${minTransactions}&max_nodes=${maxNodes}&filter_type=${filterType}&layout=${layout}`;
+        
+        // Fetch network data
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                networkData = data;
+                renderNetwork(data);
+                updateNetworkStats(data.stats);
+                
+                // Render additional visualizations if they exist
+                if (document.getElementById('time-series-chart')) {
+                    renderTimeSeriesChart({{ time_series_data|safe }});
+                }
+                
+                if (document.getElementById('risk-heatmap')) {
+                    renderRiskHeatmap(data);
+                }
+                
+                if (document.getElementById('community-chart') && document.getElementById('centrality-chart')) {
+                    renderCommunityAnalysis(data);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading network data:', error);
+                document.getElementById('network-container').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <strong>Error loading network data:</strong> ${error.message || 'Unknown error'}
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-danger" onclick="loadNetworkData()">
+                                <i class="fas fa-sync-alt mr-1"></i> Retry
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+    }
+    
+    // Render network visualization
+    function renderNetwork(data) {
+        const container = document.getElementById('network-container');
+        
+        // Get visualization options from form
+        const nodeSize = document.getElementById('node_size')?.value || 'transactions';
+        const nodeColor = document.getElementById('node_color')?.value || 'type';
+        const edgeWidth = document.getElementById('edge_width')?.value || 'transactions';
+        const edgeColor = document.getElementById('edge_color')?.value || 'flagged';
+        const clustering = document.getElementById('clustering')?.value || 'none';
+        const physicsStrength = document.getElementById('physics_strength')?.value || 'medium';
+        const layoutType = document.getElementById('layout')?.value || 'force';
+        
+        // Create nodes with different colors and sizes based on selected options
+        const nodes = data.nodes.map(node => {
+            // Determine node color based on selected option
+            let color = '#4e73df';  // Default blue for users
+            
+            if (nodeColor === 'type') {
+                // Color by node type
+                if (node.type === 'merchant') {
+                    color = '#1cc88a';  // Green for merchants
+                }
+            } else if (nodeColor === 'risk') {
+                // Color by risk level
+                if (node.risk_level === 'high') {
+                    color = '#e74a3b';  // Red for high risk
+                } else if (node.risk_level === 'medium') {
+                    color = '#f6c23e';  // Yellow for medium risk
+                } else if (node.risk_level === 'low') {
+                    color = '#36b9cc';  // Light blue for low risk
+                }
+            } else if (nodeColor === 'centrality' && node.centrality !== undefined) {
+                // Color by centrality (normalized to 0-1 range)
+                const maxCentrality = Math.max(...data.nodes.map(n => n.centrality || 0));
+                const normalizedCentrality = maxCentrality > 0 ? (node.centrality || 0) / maxCentrality : 0;
+                
+                // Generate color from blue (low) to red (high)
+                const r = Math.floor(normalizedCentrality * 255);
+                const b = Math.floor((1 - normalizedCentrality) * 255);
+                const g = Math.floor(Math.max(0, 1 - 2 * Math.abs(normalizedCentrality - 0.5)) * 255);
+                
+                color = `rgb(${r}, ${g}, ${b})`;
+            } else if (nodeColor === 'community' && node.community !== undefined) {
+                // Color by community
+                const communityColors = {
+                    'high': '#e74a3b',
+                    'medium': '#f6c23e',
+                    'low': '#1cc88a',
+                    'normal': '#4e73df',
+                    'suspicious': '#5a5c69'
+                };
+                color = communityColors[node.community] || '#4e73df';
+            } else if (nodeColor === 'activity') {
+                // Color by activity level (based on transaction count)
+                const maxTransactions = Math.max(...data.nodes.map(n => n.transactions || 0));
+                const activityLevel = maxTransactions > 0 ? (node.transactions || 0) / maxTransactions : 0;
+                
+                if (activityLevel > 0.7) {
+                    color = '#e74a3b';  // High activity - red
+                } else if (activityLevel > 0.3) {
+                    color = '#f6c23e';  // Medium activity - yellow
+                } else {
+                    color = '#1cc88a';  // Low activity - green
+                }
+            }
+            
+            // Determine node size based on selected option
+            let size = 20;  // Default size
+            
+            if (nodeSize === 'transactions') {
+                size = Math.min(50, Math.max(10, node.transactions * 3));
+            } else if (nodeSize === 'amount') {
+                size = Math.min(50, Math.max(10, Math.log10(node.amount + 1) * 5));
+            } else if (nodeSize === 'risk') {
+                size = Math.min(50, Math.max(10, (node.risk_score || 0) / 2));
+            } else if (nodeSize === 'centrality' && node.centrality !== undefined) {
+                size = Math.min(50, Math.max(10, (node.centrality || 0) * 3));
+            } else if (nodeSize === 'flagged' && node.flagged_count !== undefined) {
+                size = Math.min(50, Math.max(10, (node.flagged_count || 0) * 5 + 10));
+            }
+            
+            // Create enhanced tooltip with more information
+            const tooltip = `
+                <div class="network-tooltip">
+                    <div class="tooltip-header">${node.label}</div>
+                    <div class="tooltip-content">
+                        <p><strong>Transactions:</strong> ${node.transactions}</p>
+                        <p><strong>Total Amount:</strong> $${node.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        ${node.avg_amount ? `<p><strong>Avg Amount:</strong> $${node.avg_amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>` : ''}
+                        <p><strong>Risk Level:</strong> ${node.risk_level.charAt(0).toUpperCase() + node.risk_level.slice(1)}</p>
+                        ${node.risk_score !== undefined ? `<p><strong>Risk Score:</strong> ${node.risk_score.toFixed(1)}</p>` : ''}
+                        ${node.centrality !== undefined ? `<p><strong>Centrality:</strong> ${node.centrality.toFixed(1)}</p>` : ''}
+                        ${node.flagged_count !== undefined ? `<p><strong>Flagged Transactions:</strong> ${node.flagged_count}</p>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            return {
+                id: node.id,
+                label: node.label,
+                title: tooltip,
+                color: {
+                    background: color,
+                    border: '#2e59d9',
+                    highlight: {
+                        background: color,
+                        border: '#17a673'
+                    },
+                    hover: {
+                        background: color,
+                        border: '#17a673'
+                    }
+                },
+                font: {
+                    color: '#fff'
+                },
+                size: size,
+                value: node.transactions,
+                group: clustering === 'none' ? undefined : 
+                       clustering === 'risk' ? node.risk_level :
+                       clustering === 'type' ? node.type :
+                       clustering === 'community' ? (node.community || 'default') :
+                       clustering === 'activity' ? (node.transactions > 10 ? 'high' : node.transactions > 5 ? 'medium' : 'low') : undefined
+            };
+        });
+        
+        // Create edges with different widths and colors based on selected options
+        const edges = data.edges.map(edge => {
+            // Determine edge width based on selected option
+            let width = 1;  // Default width
+            
+            if (edgeWidth === 'transactions') {
+                width = Math.min(10, Math.max(1, edge.transactions / 2));
+            } else if (edgeWidth === 'amount') {
+                width = Math.min(10, Math.max(1, Math.log10(edge.amount + 1) / 2));
+            } else if (edgeWidth === 'risk' && edge.risk_score !== undefined) {
+                width = Math.min(10, Math.max(1, edge.risk_score / 10));
+            } else if (edgeWidth === 'fixed') {
+                width = 2;
+            }
+            
+            // Determine edge color based on selected option
+            let color = '#aaa';  // Default gray
+            
+            if (edgeColor === 'flagged') {
+                color = edge.flagged ? '#e74a3b' : '#aaa';
+            } else if (edgeColor === 'risk' && edge.risk_score !== undefined) {
+                if (edge.risk_score > 70) {
+                    color = '#e74a3b';  // High risk - red
+                } else if (edge.risk_score > 30) {
+                    color = '#f6c23e';  // Medium risk - yellow
+                } else {
+                    color = '#1cc88a';  // Low risk - green
+                }
+            } else if (edgeColor === 'amount') {
+                const maxAmount = Math.max(...data.edges.map(e => e.amount || 0));
+                const amountRatio = maxAmount > 0 ? edge.amount / maxAmount : 0;
+                
+                if (amountRatio > 0.7) {
+                    color = '#e74a3b';  // High amount - red
+                } else if (amountRatio > 0.3) {
+                    color = '#f6c23e';  // Medium amount - yellow
+                } else {
+                    color = '#1cc88a';  // Low amount - green
+                }
+            } else if (edgeColor === 'gradient') {
+                // For gradient, we'll use the 'color' object with 'from' and 'to' properties
+                // This will be handled differently below
+                color = null;
+            }
+            
+            // Create enhanced tooltip with more information
+            const tooltip = `
+                <div class="network-tooltip">
+                    <div class="tooltip-header">Transaction Details</div>
+                    <div class="tooltip-content">
+                        <p><strong>Transactions:</strong> ${edge.transactions}</p>
+                        <p><strong>Total Amount:</strong> $${edge.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        ${edge.avg_amount ? `<p><strong>Avg Amount:</strong> $${edge.avg_amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>` : ''}
+                        <p><strong>Flagged:</strong> ${edge.flagged ? 'Yes' : 'No'}</p>
+                        ${edge.flagged_count !== undefined ? `<p><strong>Flagged Count:</strong> ${edge.flagged_count}</p>` : ''}
+                        ${edge.risk_score !== undefined ? `<p><strong>Risk Score:</strong> ${edge.risk_score.toFixed(1)}</p>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Create edge object
+            const edgeObj = {
+                id: edge.id,
+                from: edge.source,
+                to: edge.target,
+                title: tooltip,
+                width: width,
+                value: edge.transactions
+            };
+            
+            // Set color based on selected option
+            if (edgeColor === 'gradient') {
+                // Find source and target nodes
+                const sourceNode = nodes.find(n => n.id === edge.source);
+                const targetNode = nodes.find(n => n.id === edge.target);
+                
+                if (sourceNode && targetNode) {
+                    edgeObj.color = {
+                        color: edge.flagged ? '#e74a3b' : '#aaa',
+                        highlight: '#17a673',
+                        hover: '#17a673',
+                        inherit: false
+                    };
+                }
+            } else {
+                edgeObj.color = {
+                    color: color,
+                    highlight: '#17a673',
+                    hover: '#17a673'
+                };
+            }
+            
+            return edgeObj;
+        });
+        
+        // Create network data
+        const visData = {
+            nodes: new vis.DataSet(nodes),
+            edges: new vis.DataSet(edges)
+        };
+        
+        // Configure physics based on selected strength
+        let physicsConfig = {
+            enabled: true,
+            stabilization: false
+        };
+        
+        switch(physicsStrength) {
+            case 'strong':
+                physicsConfig = {
+                    enabled: true,
+                    stabilization: {
+                        enabled: true,
+                        iterations: 1500
+                    },
+                    barnesHut: {
+                        gravitationalConstant: -120000,
+                        springConstant: 0.005,
+                        springLength: 250
+                    }
+                };
+                break;
+            case 'medium':
+                physicsConfig = {
+                    enabled: true,
+                    stabilization: {
+                        enabled: true,
+                        iterations: 1000
+                    },
+                    barnesHut: {
+                        gravitationalConstant: -80000,
+                        springConstant: 0.001,
+                        springLength: 200
+                    }
+                };
+                break;
+            case 'weak':
+                physicsConfig = {
+                    enabled: true,
+                    stabilization: {
+                        enabled: true,
+                        iterations: 500
+                    },
+                    barnesHut: {
+                        gravitationalConstant: -40000,
+                        springConstant: 0.0005,
+                        springLength: 150
+                    }
+                };
+                break;
+            case 'none':
+                physicsConfig = {
+                    enabled: false
+                };
+                break;
+        }
+        
+        // Configure layout based on selected option
+        let layoutConfig = {};
+        switch(layoutType) {
+            case 'circular':
+                layoutConfig = {
+                    improvedLayout: true,
+                    randomSeed: 42,
+                    hierarchical: false
+                };
+                break;
+            case 'hierarchical':
+                layoutConfig = {
+                    improvedLayout: true,
+                    hierarchical: {
+                        enabled: true,
+                        levelSeparation: 150,
+                        nodeSpacing: 100,
+                        treeSpacing: 200,
+                        blockShifting: true,
+                        edgeMinimization: true,
+                        parentCentralization: true,
+                        direction: 'UD',
+                        sortMethod: 'hubsize'
+                    }
+                };
+                break;
+            case 'radial':
+                layoutConfig = {
+                    improvedLayout: true,
+                    randomSeed: 42,
+                    hierarchical: false
+                };
+                break;
+            case 'grid':
+                layoutConfig = {
+                    improvedLayout: true,
+                    randomSeed: 42,
+                    hierarchical: {
+                        enabled: true,
+                        levelSeparation: 150,
+                        nodeSpacing: 100,
+                        treeSpacing: 200,
+                        blockShifting: true,
+                        edgeMinimization: true,
+                        parentCentralization: true,
+                        direction: 'LR',
+                        sortMethod: 'directed',
+                        shakeTowards: 'roots'
+                    }
+                };
+                break;
+            default: // force-directed
+                layoutConfig = {
+                    improvedLayout: true,
+                    randomSeed: 42,
+                    hierarchical: false
+                };
+        }
+        
+        // Network options
+        const options = {
+            nodes: {
+                shape: 'dot',
+                scaling: {
+                    min: 10,
+                    max: 30,
+                    label: {
+                        enabled: true,
+                        min: 14,
+                        max: 24
+                    }
+                },
+                font: {
+                    size: 12,
+                    face: 'Tahoma'
+                }
+            },
+            edges: {
+                width: 1,
+                smooth: {
+                    type: 'continuous'
+                },
+                arrows: {
+                    to: {
+                        enabled: false
+                    }
+                },
+                scaling: {
+                    min: 1,
+                    max: 10
+                }
+            },
+            physics: physicsConfig,
+            layout: layoutConfig,
+            interaction: {
+                tooltipDelay: 200,
+                hideEdgesOnDrag: true,
+                multiselect: true,
+                navigationButtons: true,
+                keyboard: {
+                    enabled: true,
+                    bindToWindow: false
+                },
+                zoomView: true
+            },
+            groups: {
+                // Node type groups
+                user: {
+                    color: { background: '#4e73df', border: '#2e59d9' }
+                },
+                merchant: {
+                    color: { background: '#1cc88a', border: '#17a673' }
+                },
+                
+                // Risk level groups
+                high: {
+                    color: { background: '#e74a3b', border: '#be3326' }
+                },
+                medium: {
+                    color: { background: '#f6c23e', border: '#dda20a' }
+                },
+                low: {
+                    color: { background: '#36b9cc', border: '#258391' }
+                },
+                
+                // Community groups
+                default: {
+                    color: { background: '#4e73df', border: '#2e59d9' }
+                },
+                suspicious: {
+                    color: { background: '#5a5c69', border: '#373840' }
+                }
+            }
+        };
+        
+        // Create network
+        network = new vis.Network(container, visData, options);
+        
+        // Apply specific layouts after network is stabilized
+        if (layoutType === 'circular') {
+            network.once('stabilized', function() {
+                // Get all node positions
+                const positions = network.getPositions();
+                const nodeIds = Object.keys(positions);
+                
+                // Calculate center of the network
+                let centerX = 0, centerY = 0;
+                nodeIds.forEach(id => {
+                    centerX += positions[id].x;
+                    centerY += positions[id].y;
+                });
+                centerX /= nodeIds.length;
+                centerY /= nodeIds.length;
+                
+                // Calculate radius based on network size
+                const radius = Math.min(container.clientWidth, container.clientHeight) * 0.4;
+                
+                // Position nodes in a circle
+                nodeIds.forEach((id, index) => {
+                    const angle = (2 * Math.PI * index) / nodeIds.length;
+                    const x = centerX + radius * Math.cos(angle);
+                    const y = centerY + radius * Math.sin(angle);
+                    
+                    network.moveNode(id, x, y);
+                });
+                
+                // Disable physics after positioning
+                network.setOptions({ physics: { enabled: false } });
+            });
+        } else if (layoutType === 'radial') {
+            network.once('stabilized', function() {
+                // Find the node with highest centrality or most connections
+                let centralNodeId = null;
+                let maxConnections = -1;
+                
+                data.nodes.forEach(node => {
+                    const connections = network.getConnectedNodes(node.id).length;
+                    if (connections > maxConnections) {
+                        maxConnections = connections;
+                        centralNodeId = node.id;
+                    }
+                });
+                
+                if (centralNodeId) {
+                    // Get all connected nodes by distance (BFS)
+                    const distances = {};
+                    const queue = [centralNodeId];
+                    distances[centralNodeId] = 0;
+                    
+                    while (queue.length > 0) {
+                        const currentId = queue.shift();
+                        const currentDistance = distances[currentId];
+                        
+                        const connectedNodes = network.getConnectedNodes(currentId);
+                        connectedNodes.forEach(connectedId => {
+                            if (distances[connectedId] === undefined) {
+                                distances[connectedId] = currentDistance + 1;
+                                queue.push(connectedId);
+                            }
+                        });
+                    }
+                    
+                    // Get maximum distance
+                    const maxDistance = Math.max(...Object.values(distances));
+                    
+                    // Position nodes in concentric circles
+                    const positions = network.getPositions();
+                    const centerX = container.clientWidth / 2;
+                    const centerY = container.clientHeight / 2;
+                    
+                    Object.keys(distances).forEach(id => {
+                        const distance = distances[id];
+                        const radius = (distance / maxDistance) * Math.min(container.clientWidth, container.clientHeight) * 0.4;
+                        
+                        // Calculate angle based on current position relative to center
+                        const currentX = positions[id].x - centerX;
+                        const currentY = positions[id].y - centerY;
+                        let angle = Math.atan2(currentY, currentX);
+                        if (angle < 0) angle += 2 * Math.PI;
+                        
+                        // Calculate new position
+                        const x = centerX + radius * Math.cos(angle);
+                        const y = centerY + radius * Math.sin(angle);
+                        
+                        network.moveNode(id, x, y);
+                    });
+                    
+                    // Disable physics after positioning
+                    network.setOptions({ physics: { enabled: false } });
+                }
+            });
+        }
+        
+        // Network events
+        network.on('click', function(params) {
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                const node = data.nodes.find(n => n.id === nodeId);
+                
+                if (node) {
+                    if (node.type === 'user') {
+                        const userId = node.id.replace('user_', '');
+                        window.location.href = `{% url 'transactions:user_network' user_id='PLACEHOLDER' %}`.replace('PLACEHOLDER', userId);
+                    } else if (node.type === 'merchant') {
+                        const merchantId = node.id.replace('merchant_', '');
+                        window.location.href = `{% url 'transactions:merchant_network' merchant_id='PLACEHOLDER' %}`.replace('PLACEHOLDER', merchantId);
+                    }
+                }
+            }
+        });
+        
+        // Add double-click event for zooming to a node
+        network.on('doubleClick', function(params) {
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                network.focus(nodeId, {
+                    scale: 1.2,
+                    animation: {
+                        duration: 1000,
+                        easingFunction: 'easeInOutQuad'
+                    }
+                });
+            }
+        });
+        
+        // Add hover event for highlighting connected nodes
+        network.on('hoverNode', function(params) {
+            const nodeId = params.node;
+            
+            // Get connected nodes and edges
+            const connectedNodes = network.getConnectedNodes(nodeId);
+            const connectedEdges = network.getConnectedEdges(nodeId);
+            
+            // Highlight connected nodes and edges
+            visData.nodes.update(nodes.map(node => {
+                if (node.id === nodeId || connectedNodes.includes(node.id)) {
+                    return { id: node.id, opacity: 1.0 };
+                } else {
+                    return { id: node.id, opacity: 0.3 };
+                }
+            }));
+            
+            visData.edges.update(edges.map(edge => {
+                if (connectedEdges.includes(edge.id)) {
+                    return { id: edge.id, opacity: 1.0 };
+                } else {
+                    return { id: edge.id, opacity: 0.3 };
+                }
+            }));
+        });
+        
+        // Reset highlighting when mouse leaves a node
+        network.on('blurNode', function() {
+            visData.nodes.update(nodes.map(node => {
+                return { id: node.id, opacity: 1.0 };
+            }));
+            
+            visData.edges.update(edges.map(edge => {
+                return { id: edge.id, opacity: 1.0 };
+            }));
+        });
+    }
+    
+    // Update network statistics
+    function updateNetworkStats(stats) {
+        const statsHtml = `
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                        Transactions</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">${stats.total_transactions}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card border-left-success shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Connections</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">${stats.total_connections}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-link fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card border-left-info shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Users</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">${stats.total_users}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-users fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card border-left-warning shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                        Merchants</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">${stats.total_merchants}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-store fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <h6 class="font-weight-bold">Risk Distribution</h6>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-danger" role="progressbar" 
+                        style="width: ${stats.high_risk_transactions / Math.max(1, stats.total_transactions) * 100}%" 
+                        aria-valuenow="${stats.high_risk_transactions}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="${stats.total_transactions}">
+                        ${stats.high_risk_transactions}
+                    </div>
+                    <div class="progress-bar bg-warning" role="progressbar" 
+                        style="width: ${stats.medium_risk_transactions / Math.max(1, stats.total_transactions) * 100}%" 
+                        aria-valuenow="${stats.medium_risk_transactions}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="${stats.total_transactions}">
+                        ${stats.medium_risk_transactions}
+                    </div>
+                    <div class="progress-bar bg-success" role="progressbar" 
+                        style="width: ${stats.low_risk_transactions / Math.max(1, stats.total_transactions) * 100}%" 
+                        aria-valuenow="${stats.low_risk_transactions}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="${stats.total_transactions}">
+                        ${stats.low_risk_transactions}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <span class="badge badge-danger">High: ${stats.high_risk_transactions}</span>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <span class="badge badge-warning">Medium: ${stats.medium_risk_transactions}</span>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <span class="badge badge-success">Low: ${stats.low_risk_transactions}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <h6 class="font-weight-bold">Flagged Transactions</h6>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-danger" role="progressbar" 
+                        style="width: ${stats.flagged_transactions / Math.max(1, stats.total_transactions) * 100}%" 
+                        aria-valuenow="${stats.flagged_transactions}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="${stats.total_transactions}">
+                        ${stats.flagged_transactions}
+                    </div>
+                </div>
+                <div class="text-center">
+                    <span class="badge badge-danger">Flagged: ${stats.flagged_transactions}</span>
+                    <span class="badge badge-secondary">Not Flagged: ${stats.total_transactions - stats.flagged_transactions}</span>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('network-stats').innerHTML = statsHtml;
+    }
+    
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load initial network data
+        loadNetworkData();
+        
+        // Filter form submission
+        document.getElementById('network-filter-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            loadNetworkData();
+        });
+        
+        // Network options
+        document.getElementById('zoom-to-fit').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (network) {
+                network.fit();
+            }
+        });
+        
+        document.getElementById('toggle-physics').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (network) {
+                physicsEnabled = !physicsEnabled;
+                network.setOptions({ physics: { enabled: physicsEnabled } });
+            }
+        });
+        
+        document.getElementById('download-image').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (network) {
+                html2canvas(document.getElementById('network-container')).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'transaction-network.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            }
+        });
+        
+        // Severity filtering
+        document.querySelectorAll('[data-severity]').forEach(function(element) {
+            element.addEventListener('click', function(e) {
+                e.preventDefault();
+                const severity = this.getAttribute('data-severity');
+                
+                // Hide all pattern cards
+                document.querySelectorAll('.pattern-card').forEach(function(card) {
+                    card.style.display = 'none';
+                });
+                
+                // Show only cards with matching severity
+                document.querySelectorAll(`.pattern-card.severity-${severity}`).forEach(function(card) {
+                    card.style.display = 'block';
+                });
+                
+                // Update active state in dropdown
+                document.querySelectorAll('[data-severity]').forEach(function(el) {
+                    el.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        });
+        
+        // Add a "Show All" button for severity filtering
+        const showAllSeverity = document.createElement('a');
+        showAllSeverity.className = 'dropdown-item';
+        showAllSeverity.href = '#';
+        showAllSeverity.textContent = 'Show All Severities';
+        showAllSeverity.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.pattern-card').forEach(function(card) {
+                card.style.display = 'block';
+            });
+            
+            document.querySelectorAll('[data-severity]').forEach(function(el) {
+                el.classList.remove('active');
+            });
+            this.classList.add('active');
+        });
+        
+        // Add the button to the dropdown
+        const severityDropdown = document.querySelector('[data-severity]').parentNode.parentNode;
+        severityDropdown.appendChild(showAllSeverity);
+        
+        // Add animation effects to cards
+        document.querySelectorAll('.card').forEach(function(card) {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    });
+</script>
+{% endblock %}

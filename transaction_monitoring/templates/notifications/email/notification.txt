@@ -1,0 +1,29 @@
+{{ notification.title }}
+{{ notification.get_notification_type_display }} Notification
+===============================================================
+
+Hello {{ user.first_name|default:user.username }},
+
+{{ notification.message }}
+
+{% if notification.related_object_type or notification.priority %}
+DETAILS:
+--------
+{% if notification.priority %}Priority: {{ notification.get_priority_display }}{% endif %}
+{% if notification.related_object_type %}Related To: {{ notification.related_object_type }} {% if notification.related_object_id %}({{ notification.related_object_id }}){% endif %}{% endif %}
+Date: {{ notification.created_at|date:"F j, Y, g:i a" }}
+{% endif %}
+
+{% if notification.link_url %}
+To view more details, please visit:
+{{ notification.link_url }}
+{% else %}
+To view this notification in the Transaction Monitoring System, please visit:
+https://transaction-monitoring.example.com{% url 'notifications:detail' notification.pk %}
+{% endif %}
+
+===============================================================
+This is an automated message from the Transaction Monitoring and Fraud Detection System.
+If you have any questions, please contact your system administrator.
+
+© {% now "Y" %} Transaction Monitoring System. All rights reserved.

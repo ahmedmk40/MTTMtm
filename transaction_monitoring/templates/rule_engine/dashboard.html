@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rule Engine Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="h2 mb-4">Rule Engine Dashboard</h1>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Time Range</h5>
+                    <div>
+                        <a href="{% url 'rule_engine:dashboard' %}?days=7" class="btn btn-sm {% if days == 7 %}btn-primary{% else %}btn-outline-primary{% endif %}">7 Days</a>
+                        <a href="{% url 'rule_engine:dashboard' %}?days=30" class="btn btn-sm {% if days == 30 %}btn-primary{% else %}btn-outline-primary{% endif %}">30 Days</a>
+                        <a href="{% url 'rule_engine:dashboard' %}?days=90" class="btn btn-sm {% if days == 90 %}btn-primary{% else %}btn-outline-primary{% endif %}">90 Days</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Rules</h5>
+                    <h2 class="display-4">{{ rule_stats.total }}</h2>
+                    <div class="d-flex justify-content-around mt-3">
+                        <div>
+                            <span class="badge bg-success">{{ rule_stats.active }}</span>
+                            <p class="small text-muted mb-0">Active</p>
+                        </div>
+                        <div>
+                            <span class="badge bg-secondary">{{ rule_stats.inactive }}</span>
+                            <p class="small text-muted mb-0">Inactive</p>
+                        </div>
+                    </div>
+                    <a href="{% url 'rule_engine:list' %}" class="btn btn-sm btn-primary mt-3">View All Rules</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Rule Sets</h5>
+                    <h2 class="display-4">{{ ruleset_stats.total }}</h2>
+                    <div class="d-flex justify-content-around mt-3">
+                        <div>
+                            <span class="badge bg-success">{{ ruleset_stats.active }}</span>
+                            <p class="small text-muted mb-0">Active</p>
+                        </div>
+                        <div>
+                            <span class="badge bg-secondary">{{ ruleset_stats.inactive }}</span>
+                            <p class="small text-muted mb-0">Inactive</p>
+                        </div>
+                    </div>
+                    <a href="{% url 'rule_engine:ruleset_list' %}" class="btn btn-sm btn-primary mt-3">View All Rule Sets</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Rule Executions</h5>
+                    <h2 class="display-4">{{ execution_stats.total }}</h2>
+                    <div class="d-flex justify-content-around mt-3">
+                        <div>
+                            <span class="badge bg-danger">{{ execution_stats.triggered }}</span>
+                            <p class="small text-muted mb-0">Triggered</p>
+                        </div>
+                        <div>
+                            <span class="badge bg-success">{{ execution_stats.not_triggered }}</span>
+                            <p class="small text-muted mb-0">Not Triggered</p>
+                        </div>
+                    </div>
+                    <a href="{% url 'rule_engine:execution_list' %}" class="btn btn-sm btn-primary mt-3">View All Executions</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rule Executions Over Time</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="executionsChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rules by Type</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="ruleTypeChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rules by Action</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="ruleActionChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Top Triggered Rules</h5>
+                    <a href="{% url 'rule_engine:list' %}?sort=-hit_count" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Rule</th>
+                                    <th>Type</th>
+                                    <th>Hit Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rule in rule_stats.top_triggered %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'rule_engine:detail' rule.id %}">{{ rule.name }}</a>
+                                    </td>
+                                    <td>{{ rule.rule_type }}</td>
+                                    <td>{{ rule.hit_count }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-3">No rules have been triggered yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'rule_engine:create' %}" class="btn btn-primary w-100">
+                                <i class="fas fa-plus-circle me-2"></i> Create New Rule
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'rule_engine:ruleset_create' %}" class="btn btn-primary w-100">
+                                <i class="fas fa-layer-group me-2"></i> Create New Rule Set
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'rule_engine:test' %}" class="btn btn-primary w-100">
+                                <i class="fas fa-flask me-2"></i> Test Rules
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'rule_engine:execution_list' %}" class="btn btn-primary w-100">
+                                <i class="fas fa-history me-2"></i> View Executions
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Executions Chart
+        const executionsCtx = document.getElementById('executionsChart').getContext('2d');
+        const executionsChart = new Chart(executionsCtx, {
+            type: 'line',
+            data: {
+                labels: [{% for item in daily_executions %}'{{ item.date }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [
+                    {
+                        label: 'Total Executions',
+                        data: [{% for item in daily_executions %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Triggered Rules',
+                        data: [{% for item in daily_triggers %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+        
+        // Rule Type Chart
+        const ruleTypeCtx = document.getElementById('ruleTypeChart').getContext('2d');
+        const ruleTypeChart = new Chart(ruleTypeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [{% for item in rule_stats.by_type %}'{{ item.rule_type }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for item in rule_stats.by_type %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)',
+                        'rgba(255, 159, 64, 0.7)',
+                        'rgba(199, 199, 199, 0.7)',
+                        'rgba(83, 102, 255, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+        
+        // Rule Action Chart
+        const ruleActionCtx = document.getElementById('ruleActionChart').getContext('2d');
+        const ruleActionChart = new Chart(ruleActionCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for item in rule_stats.by_action %}'{{ item.action }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Rules by Action',
+                    data: [{% for item in rule_stats.by_action %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(54, 162, 235, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

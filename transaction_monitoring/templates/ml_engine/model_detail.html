@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ model.name }} - ML Model Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:model_list' %}">Models</a></li>
+                    <li class="breadcrumb-item active">{{ model.name }}</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">{{ model.name }} <small class="text-muted">v{{ model.version }}</small></h1>
+                <div class="btn-group">
+                    {% if perms.ml_engine.change_mlmodel %}
+                        {% if not model.is_active %}
+                        <a href="{% url 'ml_engine:model_activate' model.id %}" class="btn btn-success">
+                            <i class="fas fa-check mr-2"></i> Activate Model
+                        </a>
+                        {% else %}
+                        <a href="{% url 'ml_engine:model_deactivate' model.id %}" class="btn btn-warning">
+                            <i class="fas fa-pause mr-2"></i> Deactivate Model
+                        </a>
+                        {% endif %}
+                    {% endif %}
+                    {% if perms.ml_engine.delete_mlmodel %}
+                    <a href="{% url 'ml_engine:model_delete' model.id %}" class="btn btn-danger">
+                        <i class="fas fa-trash mr-2"></i> Delete Model
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Model Information -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Model Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Name:</div>
+                        <div class="col-md-8">{{ model.name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Version:</div>
+                        <div class="col-md-8">{{ model.version }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Type:</div>
+                        <div class="col-md-8">{{ model.get_model_type_display }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Status:</div>
+                        <div class="col-md-8">
+                            {% if model.is_active %}
+                            <span class="badge badge-success">Active</span>
+                            {% else %}
+                            <span class="badge badge-secondary">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Created:</div>
+                        <div class="col-md-8">{{ model.created_at|date:"F d, Y H:i" }}</div>
+                    </div>
+                    {% if model.deployed_at %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Deployed:</div>
+                        <div class="col-md-8">{{ model.deployed_at|date:"F d, Y H:i" }}</div>
+                    </div>
+                    {% endif %}
+                    {% if model.deployed_by %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Deployed By:</div>
+                        <div class="col-md-8">{{ model.deployed_by }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Description:</div>
+                        <div class="col-md-8">{{ model.description }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Performance Metrics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Accuracy</h5>
+                                    <div class="display-4">{{ model.accuracy|floatformat:2 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Precision</h5>
+                                    <div class="display-4">{{ model.precision|floatformat:2 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Recall</h5>
+                                    <div class="display-4">{{ model.recall|floatformat:2 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">F1 Score</h5>
+                                    <div class="display-4">{{ model.f1_score|floatformat:2 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if model.auc_roc %}
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">AUC-ROC</h5>
+                                    <div class="display-4">{{ model.auc_roc|floatformat:2 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Feature Importance and Training Info -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Feature Importance</h6>
+                </div>
+                <div class="card-body">
+                    {% if feature_importance %}
+                        <div class="chart-bar">
+                            <canvas id="featureImportanceChart"></canvas>
+                        </div>
+                        <div class="mt-4">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Feature</th>
+                                        <th>Importance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feature, importance in feature_importance %}
+                                    <tr>
+                                        <td>{{ feature }}</td>
+                                        <td>{{ importance|floatformat:4 }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No feature importance data available for this model.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Training Information</h6>
+                </div>
+                <div class="card-body">
+                    {% if model.training_date %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Training Date:</div>
+                        <div class="col-md-8">{{ model.training_date|date:"F d, Y H:i" }}</div>
+                    </div>
+                    {% endif %}
+                    {% if model.training_data_size %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Training Data Size:</div>
+                        <div class="col-md-8">{{ model.training_data_size }} samples</div>
+                    </div>
+                    {% endif %}
+                    {% if model.training_parameters %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 font-weight-bold">Training Parameters:</div>
+                        <div class="col-md-8">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for param, value in model.training_parameters.items %}
+                                    <tr>
+                                        <td>{{ param }}</td>
+                                        <td>{{ value }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Predictions -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Predictions</h6>
+                    <a href="{% url 'ml_engine:prediction_list' %}?model_id={{ model.id }}" class="btn btn-sm btn-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if predictions %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Transaction ID</th>
+                                        <th>Risk Score</th>
+                                        <th>Execution Time (ms)</th>
+                                        <th>Time</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for prediction in predictions %}
+                                    <tr>
+                                        <td>{{ prediction.transaction_id }}</td>
+                                        <td>
+                                            <span class="badge {% if prediction.prediction >= 80 %}badge-danger{% elif prediction.prediction >= 50 %}badge-warning{% else %}badge-success{% endif %}">
+                                                {{ prediction.prediction|floatformat:2 }}
+                                            </span>
+                                        </td>
+                                        <td>{{ prediction.execution_time|floatformat:2 }}</td>
+                                        <td>{{ prediction.created_at|date:"M d, Y H:i" }}</td>
+                                        <td>
+                                            <a href="{% url 'ml_engine:prediction_detail' prediction.id %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No predictions found for this model.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if feature_importance %}
+        // Feature Importance Chart
+        var featureCtx = document.getElementById('featureImportanceChart').getContext('2d');
+        var featureChart = new Chart(featureCtx, {
+            type: 'horizontalBar',
+            data: {
+                labels: [
+                    {% for feature, importance in feature_importance %}
+                        "{{ feature }}"{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Feature Importance',
+                    data: [
+                        {% for feature, importance in feature_importance %}
+                            {{ importance }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(78, 115, 223, 0.8)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    xAxes: [{
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                },
+                legend: {
+                    display: false
+                }
+            }
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance Officer Dashboard - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">Compliance Officer Dashboard</h1>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Total Alerts</h5>
+                            <h2 class="mb-0">{{ alert_count }}</h2>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-bell fs-1 text-primary"></i>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted">Last 30 days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Open Alerts</h5>
+                            <h2 class="mb-0">{{ open_alert_count }}</h2>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted">Requiring review</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">SARs Filed</h5>
+                            <h2 class="mb-0">{{ sars_filed_count|default:"0" }}</h2>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-file-earmark-text fs-1 text-info"></i>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted">This month</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Alerts by Status</h5>
+                    <div class="chart-container">
+                        <canvas id="alertStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Alerts by Type</h5>
+                    <div class="chart-container">
+                        <canvas id="alertTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Alerts -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Recent AML Alerts</h5>
+                    <a href="#" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Alert ID</th>
+                                    <th>Type</th>
+                                    <th>User ID</th>
+                                    <th>Risk Score</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alert in recent_alerts %}
+                                <tr>
+                                    <td>{{ alert.alert_id }}</td>
+                                    <td>{{ alert.get_alert_type_display }}</td>
+                                    <td>{{ alert.user_id }}</td>
+                                    <td>
+                                        <span class="badge {% if alert.risk_score > 75 %}bg-danger{% elif alert.risk_score > 50 %}bg-warning{% else %}bg-success{% endif %}">
+                                            {{ alert.risk_score }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if alert.status == 'open' %}bg-danger{% elif alert.status == 'investigating' %}bg-warning{% else %}bg-success{% endif %}">
+                                            {{ alert.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No alerts found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Alert Status Chart
+        const statusCtx = document.getElementById('alertStatusChart').getContext('2d');
+        const statusChart = new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for status in alert_status_counts %}'{{ status.status|capfirst }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for status in alert_status_counts %}{{ status.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [
+                        '#dc3545', // Open - Red
+                        '#ffc107', // Investigating - Yellow
+                        '#198754', // Closed - Green
+                        '#6c757d'  // Other - Gray
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Alert Type Chart
+        const typeCtx = document.getElementById('alertTypeChart').getContext('2d');
+        const typeChart = new Chart(typeCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for type in alert_type_counts %}'{{ type.alert_type|capfirst }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Number of Alerts',
+                    data: [{% for type in alert_type_counts %}{{ type.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: '#0d6efd',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

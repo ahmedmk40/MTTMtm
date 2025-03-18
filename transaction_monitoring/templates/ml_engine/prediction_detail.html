@@ -1,0 +1,487 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Prediction Details - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:prediction_list' %}">Predictions</a></li>
+                    <li class="breadcrumb-item active">Prediction Details</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Prediction Details</h1>
+        </div>
+    </div>
+    
+    <!-- Prediction Summary -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Prediction Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Transaction ID:</div>
+                                <div class="col-md-8">{{ prediction.transaction_id }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Model:</div>
+                                <div class="col-md-8">
+                                    <a href="{% url 'ml_engine:model_detail' prediction.model.id %}">
+                                        {{ prediction.model.name }} v{{ prediction.model.version }}
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Model Type:</div>
+                                <div class="col-md-8">{{ prediction.model.get_model_type_display }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Prediction Time:</div>
+                                <div class="col-md-8">{{ prediction.created_at|date:"F d, Y H:i:s" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Risk Score:</div>
+                                <div class="col-md-8">
+                                    <span class="badge {% if prediction.prediction >= 80 %}badge-danger{% elif prediction.prediction >= 50 %}badge-warning{% else %}badge-success{% endif %} p-2">
+                                        {{ prediction.prediction|floatformat:2 }}
+                                    </span>
+                                </div>
+                            </div>
+                            {% if prediction.prediction_probability %}
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Probability:</div>
+                                <div class="col-md-8">{{ prediction.prediction_probability|floatformat:4 }}</div>
+                            </div>
+                            {% endif %}
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Execution Time:</div>
+                                <div class="col-md-8">{{ prediction.execution_time|floatformat:2 }} ms</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Risk Level:</div>
+                                <div class="col-md-8">
+                                    {% if prediction.prediction >= 80 %}
+                                    <span class="text-danger font-weight-bold">High Risk</span>
+                                    {% elif prediction.prediction >= 50 %}
+                                    <span class="text-warning font-weight-bold">Medium Risk</span>
+                                    {% else %}
+                                    <span class="text-success font-weight-bold">Low Risk</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Explanation and Features -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Prediction Explanation</h6>
+                </div>
+                <div class="card-body">
+                    {% if prediction.explanation %}
+                        {% if prediction.explanation.top_features %}
+                            <h5 class="mb-3">Top Contributing Features</h5>
+                            <div class="chart-bar mb-4">
+                                <canvas id="topFeaturesChart"></canvas>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Feature</th>
+                                            <th>Value</th>
+                                            <th>Importance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for feature in prediction.explanation.top_features %}
+                                        <tr>
+                                            <td>{{ feature.name }}</td>
+                                            <td>{{ feature.value }}</td>
+                                            <td>{{ feature.importance|floatformat:4 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                No detailed explanation available for this prediction.
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            No explanation available for this prediction.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Transaction Features</h6>
+                </div>
+                <div class="card-body">
+                    {% if prediction.features %}
+                        <div class="accordion" id="featuresAccordion">
+                            <!-- Basic Features -->
+                            <div class="card">
+                                <div class="card-header" id="headingBasic">
+                                    <h2 class="mb-0">
+                                        <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#collapseBasic" aria-expanded="true" aria-controls="collapseBasic">
+                                            Basic Features
+                                        </button>
+                                    </h2>
+                                </div>
+                                <div id="collapseBasic" class="collapse show" aria-labelledby="headingBasic" data-parent="#featuresAccordion">
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <tbody>
+                                                    {% if prediction.features.amount %}
+                                                    <tr>
+                                                        <th>Amount</th>
+                                                        <td>{{ prediction.features.amount }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.transaction_type %}
+                                                    <tr>
+                                                        <th>Transaction Type</th>
+                                                        <td>{{ prediction.features.transaction_type }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.channel %}
+                                                    <tr>
+                                                        <th>Channel</th>
+                                                        <td>{{ prediction.features.channel }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Time Features -->
+                            <div class="card">
+                                <div class="card-header" id="headingTime">
+                                    <h2 class="mb-0">
+                                        <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTime" aria-expanded="false" aria-controls="collapseTime">
+                                            Time Features
+                                        </button>
+                                    </h2>
+                                </div>
+                                <div id="collapseTime" class="collapse" aria-labelledby="headingTime" data-parent="#featuresAccordion">
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <tbody>
+                                                    {% if prediction.features.hour_of_day %}
+                                                    <tr>
+                                                        <th>Hour of Day</th>
+                                                        <td>{{ prediction.features.hour_of_day }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.day_of_week %}
+                                                    <tr>
+                                                        <th>Day of Week</th>
+                                                        <td>{{ prediction.features.day_of_week }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.is_weekend %}
+                                                    <tr>
+                                                        <th>Is Weekend</th>
+                                                        <td>{{ prediction.features.is_weekend }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.is_night %}
+                                                    <tr>
+                                                        <th>Is Night</th>
+                                                        <td>{{ prediction.features.is_night }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Location Features -->
+                            <div class="card">
+                                <div class="card-header" id="headingLocation">
+                                    <h2 class="mb-0">
+                                        <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseLocation" aria-expanded="false" aria-controls="collapseLocation">
+                                            Location Features
+                                        </button>
+                                    </h2>
+                                </div>
+                                <div id="collapseLocation" class="collapse" aria-labelledby="headingLocation" data-parent="#featuresAccordion">
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <tbody>
+                                                    {% if prediction.features.country %}
+                                                    <tr>
+                                                        <th>Country</th>
+                                                        <td>{{ prediction.features.country }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.has_ip %}
+                                                    <tr>
+                                                        <th>Has IP</th>
+                                                        <td>{{ prediction.features.has_ip }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.has_coordinates %}
+                                                    <tr>
+                                                        <th>Has Coordinates</th>
+                                                        <td>{{ prediction.features.has_coordinates }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Payment Method Features -->
+                            <div class="card">
+                                <div class="card-header" id="headingPayment">
+                                    <h2 class="mb-0">
+                                        <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapsePayment" aria-expanded="false" aria-controls="collapsePayment">
+                                            Payment Method Features
+                                        </button>
+                                    </h2>
+                                </div>
+                                <div id="collapsePayment" class="collapse" aria-labelledby="headingPayment" data-parent="#featuresAccordion">
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <tbody>
+                                                    {% if prediction.features.payment_method_type %}
+                                                    <tr>
+                                                        <th>Payment Method Type</th>
+                                                        <td>{{ prediction.features.payment_method_type }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.is_new_card %}
+                                                    <tr>
+                                                        <th>Is New Card</th>
+                                                        <td>{{ prediction.features.is_new_card }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.card_bin %}
+                                                    <tr>
+                                                        <th>Card BIN</th>
+                                                        <td>{{ prediction.features.card_bin }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Channel-Specific Features -->
+                            <div class="card">
+                                <div class="card-header" id="headingChannel">
+                                    <h2 class="mb-0">
+                                        <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseChannel" aria-expanded="false" aria-controls="collapseChannel">
+                                            Channel-Specific Features
+                                        </button>
+                                    </h2>
+                                </div>
+                                <div id="collapseChannel" class="collapse" aria-labelledby="headingChannel" data-parent="#featuresAccordion">
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <tbody>
+                                                    {% if prediction.features.entry_mode %}
+                                                    <tr>
+                                                        <th>Entry Mode</th>
+                                                        <td>{{ prediction.features.entry_mode }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.terminal_type %}
+                                                    <tr>
+                                                        <th>Terminal Type</th>
+                                                        <td>{{ prediction.features.terminal_type }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.attendance %}
+                                                    <tr>
+                                                        <th>Attendance</th>
+                                                        <td>{{ prediction.features.attendance }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.condition %}
+                                                    <tr>
+                                                        <th>Condition</th>
+                                                        <td>{{ prediction.features.condition }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.is_3ds_verified %}
+                                                    <tr>
+                                                        <th>Is 3DS Verified</th>
+                                                        <td>{{ prediction.features.is_3ds_verified }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% if prediction.features.is_billing_shipping_match %}
+                                                    <tr>
+                                                        <th>Is Billing/Shipping Match</th>
+                                                        <td>{{ prediction.features.is_billing_shipping_match }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Other Features -->
+                            <div class="card">
+                                <div class="card-header" id="headingOther">
+                                    <h2 class="mb-0">
+                                        <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseOther" aria-expanded="false" aria-controls="collapseOther">
+                                            Other Features
+                                        </button>
+                                    </h2>
+                                </div>
+                                <div id="collapseOther" class="collapse" aria-labelledby="headingOther" data-parent="#featuresAccordion">
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <tbody>
+                                                    {% if prediction.features.mcc %}
+                                                    <tr>
+                                                        <th>MCC</th>
+                                                        <td>{{ prediction.features.mcc }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    {% for key, value in prediction.features.items %}
+                                                        {% if key != 'amount' and key != 'transaction_type' and key != 'channel' and key != 'hour_of_day' and key != 'day_of_week' and key != 'is_weekend' and key != 'is_night' and key != 'country' and key != 'has_ip' and key != 'has_coordinates' and key != 'payment_method_type' and key != 'is_new_card' and key != 'card_bin' and key != 'entry_mode' and key != 'terminal_type' and key != 'attendance' and key != 'condition' and key != 'is_3ds_verified' and key != 'is_billing_shipping_match' and key != 'mcc' %}
+                                                        <tr>
+                                                            <th>{{ key }}</th>
+                                                            <td>{{ value }}</td>
+                                                        </tr>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No feature data available for this prediction.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <a href="{% url 'ml_engine:prediction_list' %}" class="btn btn-primary btn-block">
+                                <i class="fas fa-list mr-2"></i> Back to Predictions
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="{% url 'ml_engine:model_detail' prediction.model.id %}" class="btn btn-info btn-block">
+                                <i class="fas fa-brain mr-2"></i> View Model Details
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="#" class="btn btn-secondary btn-block">
+                                <i class="fas fa-file-export mr-2"></i> Export Prediction
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if prediction.explanation.top_features %}
+        // Top Features Chart
+        var featuresCtx = document.getElementById('topFeaturesChart').getContext('2d');
+        var featuresChart = new Chart(featuresCtx, {
+            type: 'horizontalBar',
+            data: {
+                labels: [
+                    {% for feature in prediction.explanation.top_features %}
+                        "{{ feature.name }}"{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Feature Importance',
+                    data: [
+                        {% for feature in prediction.explanation.top_features %}
+                            {{ feature.importance }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(78, 115, 223, 0.8)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    xAxes: [{
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                },
+                legend: {
+                    display: false
+                }
+            }
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %}

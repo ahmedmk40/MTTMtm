@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Executive Dashboard - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">Executive Dashboard</h1>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Transaction Count</h5>
+                            <h2 class="mb-0">{{ transaction_count }}</h2>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-credit-card fs-1 text-primary"></i>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted">Last 30 days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Transaction Volume</h5>
+                            <h2 class="mb-0">${{ transaction_volume|floatformat:2 }}</h2>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-cash-stack fs-1 text-success"></i>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted">Last 30 days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Fraud Rate</h5>
+                            <h2 class="mb-0">{{ fraud_rate|floatformat:2 }}%</h2>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-shield-exclamation fs-1 text-warning"></i>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted">Last 30 days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title">Financial Impact</h5>
+                            <h2 class="mb-0">${{ financial_impact|floatformat:2 }}</h2>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-exclamation-triangle fs-1 text-danger"></i>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted">Fraud losses</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Transaction Volume by Channel</h5>
+                    <div class="chart-container">
+                        <canvas id="channelVolumeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Transaction Count by Channel</h5>
+                    <div class="chart-container">
+                        <canvas id="channelCountChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trend Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Trend Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Exposure Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Risk Exposure Summary</h5>
+                    <a href="#" class="btn btn-sm btn-primary">View Detailed Report</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Risk Category</th>
+                                    <th>Current Exposure</th>
+                                    <th>Previous Month</th>
+                                    <th>Change</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Card Fraud</td>
+                                    <td>$45,320.00</td>
+                                    <td>$52,150.00</td>
+                                    <td class="text-success">-13.1%</td>
+                                    <td><span class="badge bg-success">Improving</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Account Takeover</td>
+                                    <td>$28,750.00</td>
+                                    <td>$22,430.00</td>
+                                    <td class="text-danger">+28.2%</td>
+                                    <td><span class="badge bg-danger">Deteriorating</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Money Laundering</td>
+                                    <td>$105,200.00</td>
+                                    <td>$98,750.00</td>
+                                    <td class="text-danger">+6.5%</td>
+                                    <td><span class="badge bg-warning">Stable</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Synthetic Identity</td>
+                                    <td>$32,450.00</td>
+                                    <td>$35,200.00</td>
+                                    <td class="text-success">-7.8%</td>
+                                    <td><span class="badge bg-success">Improving</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Transaction Fraud</td>
+                                    <td>$67,890.00</td>
+                                    <td>$71,230.00</td>
+                                    <td class="text-success">-4.7%</td>
+                                    <td><span class="badge bg-success">Improving</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Channel Volume Chart
+        const volumeCtx = document.getElementById('channelVolumeChart').getContext('2d');
+        const volumeChart = new Chart(volumeCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for channel in transaction_channel_volume %}'{{ channel.channel|capfirst }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Transaction Volume ($)',
+                    data: [{% for channel in transaction_channel_volume %}{{ channel.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.7)',  // Primary
+                        'rgba(25, 135, 84, 0.7)',   // Success
+                        'rgba(255, 193, 7, 0.7)'    // Warning
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Volume ($)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Channel Count Chart
+        const countCtx = document.getElementById('channelCountChart').getContext('2d');
+        const countChart = new Chart(countCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for channel in transaction_channel_counts %}'{{ channel.channel|capfirst }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for channel in transaction_channel_counts %}{{ channel.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.7)',  // Primary
+                        'rgba(25, 135, 84, 0.7)',   // Success
+                        'rgba(255, 193, 7, 0.7)'    // Warning
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Trend Chart (6-month trend)
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        const trendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
+                datasets: [
+                    {
+                        label: 'Transaction Volume',
+                        data: [1250000, 1320000, 1450000, 1380000, 1420000, 1520000],
+                        borderColor: 'rgba(13, 110, 253, 1)',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Fraud Rate (%)',
+                        data: [1.2, 1.1, 0.9, 1.0, 0.85, 0.75],
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Volume ($)'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Fraud Rate (%)'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Role Management - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:user_list' %}">User Management</a></li>
+                    <li class="breadcrumb-item active">Roles</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2 mb-0">Role Management</h1>
+                <a href="{% url 'accounts:role_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus mr-2"></i> Create New Role
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Roles Table -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Roles</h6>
+                </div>
+                <div class="card-body">
+                    {% if roles %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Role Name</th>
+                                        <th>Users</th>
+                                        <th>Permissions</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for role in roles %}
+                                    <tr>
+                                        <td>{{ role.name }}</td>
+                                        <td>{{ role.user_count }}</td>
+                                        <td>{{ role.permissions.count }}</td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{% url 'accounts:role_edit' role.id %}" class="btn btn-sm btn-info" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{% url 'accounts:role_permissions' role.id %}" class="btn btn-sm btn-primary" title="Manage Permissions">
+                                                    <i class="fas fa-key"></i>
+                                                </a>
+                                                <a href="{% url 'accounts:role_delete' role.id %}" class="btn btn-sm btn-danger" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No roles found. <a href="{% url 'accounts:role_create' %}">Create a new role</a>.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Links -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Quick Links</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'accounts:user_list' %}" class="btn btn-primary btn-block">
+                                <i class="fas fa-users mr-2"></i> Manage Users
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'accounts:user_create' %}" class="btn btn-success btn-block">
+                                <i class="fas fa-user-plus mr-2"></i> Create New User
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

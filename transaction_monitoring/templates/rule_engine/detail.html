@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rule: {{ rule.name }} - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:list' %}">Rules</a></li>
+                    <li class="breadcrumb-item active">{{ rule.name }}</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">{{ rule.name }} <span class="badge bg-secondary">v{{ rule.version }}</span></h1>
+                <div>
+                    <a href="{% url 'rule_engine:test_rule' rule.id %}" class="btn btn-primary">
+                        <i class="fas fa-flask me-2"></i> Test Rule
+                    </a>
+                    <a href="{% url 'rule_engine:edit' rule.id %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i> Edit
+                    </a>
+                    <form method="post" action="{% url 'rule_engine:toggle' rule.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-{% if rule.is_active %}warning{% else %}success{% endif %}">
+                            <i class="fas fa-{% if rule.is_active %}pause{% else %}play{% endif %} me-2"></i> 
+                            {% if rule.is_active %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rule Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Description:</div>
+                        <div class="col-md-9">{{ rule.description }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Rule Type:</div>
+                        <div class="col-md-9">{{ rule.get_rule_type_display }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Action:</div>
+                        <div class="col-md-9">
+                            {% if rule.action == 'approve' %}
+                            <span class="badge bg-success">Approve</span>
+                            {% elif rule.action == 'reject' %}
+                            <span class="badge bg-danger">Reject</span>
+                            {% elif rule.action == 'review' %}
+                            <span class="badge bg-warning">Flag for Review</span>
+                            {% else %}
+                            <span class="badge bg-info">Notify Only</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Risk Score:</div>
+                        <div class="col-md-9">{{ rule.risk_score }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Priority:</div>
+                        <div class="col-md-9">{{ rule.priority }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Status:</div>
+                        <div class="col-md-9">
+                            {% if rule.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Applies To:</div>
+                        <div class="col-md-9">
+                            {% if rule.applies_to_pos %}
+                            <span class="badge bg-primary me-1">POS</span>
+                            {% endif %}
+                            {% if rule.applies_to_ecommerce %}
+                            <span class="badge bg-primary me-1">E-commerce</span>
+                            {% endif %}
+                            {% if rule.applies_to_wallet %}
+                            <span class="badge bg-primary me-1">Wallet</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Created By:</div>
+                        <div class="col-md-9">{{ rule.created_by }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Created At:</div>
+                        <div class="col-md-9">{{ rule.created_at }}</div>
+                    </div>
+                    {% if rule.last_modified_by %}
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Last Modified By:</div>
+                        <div class="col-md-9">{{ rule.last_modified_by }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Last Modified At:</div>
+                        <div class="col-md-9">{{ rule.updated_at }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rule Condition</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="p-3 bg-light rounded"><code>{{ rule.condition }}</code></pre>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Recent Executions</h5>
+                    <a href="{% url 'rule_engine:execution_list' %}?rule_id={{ rule.id }}" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Transaction ID</th>
+                                    <th>Timestamp</th>
+                                    <th>Result</th>
+                                    <th>Execution Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for execution in recent_executions %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'rule_engine:execution_detail' execution.id %}">{{ execution.transaction_id }}</a>
+                                    </td>
+                                    <td>{{ execution.created_at }}</td>
+                                    <td>
+                                        {% if execution.triggered %}
+                                        <span class="badge bg-danger">Triggered</span>
+                                        {% else %}
+                                        <span class="badge bg-success">Not Triggered</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ execution.execution_time|floatformat:2 }} ms</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-3">No executions found for this rule.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Execution Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6 text-center">
+                            <h5>Total Executions</h5>
+                            <h2 class="display-5">{{ execution_stats.total }}</h2>
+                        </div>
+                        <div class="col-6 text-center">
+                            <h5>Hit Count</h5>
+                            <h2 class="display-5">{{ rule.hit_count }}</h2>
+                        </div>
+                    </div>
+                    
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ execution_stats.trigger_rate }}%;" aria-valuenow="{{ execution_stats.trigger_rate }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ execution_stats.trigger_rate|floatformat:1 }}% Triggered
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-6 text-center">
+                            <h6>Triggered</h6>
+                            <p class="mb-0">{{ execution_stats.triggered }}</p>
+                        </div>
+                        <div class="col-6 text-center">
+                            <h6>Not Triggered</h6>
+                            <p class="mb-0">{{ execution_stats.not_triggered }}</p>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row mb-3">
+                        <div class="col-4 text-center">
+                            <h6>Min Time</h6>
+                            <p class="mb-0">{{ execution_stats.min_execution_time|floatformat:2 }} ms</p>
+                        </div>
+                        <div class="col-4 text-center">
+                            <h6>Avg Time</h6>
+                            <p class="mb-0">{{ execution_stats.avg_execution_time|floatformat:2 }} ms</p>
+                        </div>
+                        <div class="col-4 text-center">
+                            <h6>Max Time</h6>
+                            <p class="mb-0">{{ execution_stats.max_execution_time|floatformat:2 }} ms</p>
+                        </div>
+                    </div>
+                    
+                    {% if rule.last_triggered %}
+                    <hr>
+                    <div class="text-center">
+                        <h6>Last Triggered</h6>
+                        <p class="mb-0">{{ rule.last_triggered }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rule Sets</h5>
+                </div>
+                <div class="card-body">
+                    {% if rule_sets %}
+                    <ul class="list-group">
+                        {% for ruleset in rule_sets %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="{% url 'rule_engine:ruleset_detail' ruleset.id %}">{{ ruleset.name }}</a>
+                            {% if ruleset.is_active %}
+                            <span class="badge bg-success rounded-pill">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary rounded-pill">Inactive</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-center mb-0">This rule is not part of any rule set.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

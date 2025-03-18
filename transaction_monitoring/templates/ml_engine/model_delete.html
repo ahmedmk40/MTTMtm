@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete ML Model - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:model_list' %}">Models</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:model_detail' model.id %}">{{ model.name }}</a></li>
+                    <li class="breadcrumb-item active">Delete</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Delete Model</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Confirm Deletion</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle mr-2"></i> 
+                        <strong>Warning:</strong> You are about to delete the model "{{ model.name }} v{{ model.version }}". This action cannot be undone.
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Model Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Name:</div>
+                                <div class="col-md-8">{{ model.name }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Version:</div>
+                                <div class="col-md-8">{{ model.version }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Type:</div>
+                                <div class="col-md-8">{{ model.get_model_type_display }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Status:</div>
+                                <div class="col-md-8">
+                                    {% if model.is_active %}
+                                    <span class="badge badge-success">Active</span>
+                                    {% else %}
+                                    <span class="badge badge-secondary">Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Created:</div>
+                                <div class="col-md-8">{{ model.created_at|date:"F d, Y H:i" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash mr-2"></i> Confirm Delete
+                            </button>
+                            <a href="{% url 'ml_engine:model_detail' model.id %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times mr-2"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

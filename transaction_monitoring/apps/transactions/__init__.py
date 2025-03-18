@@ -1,0 +1,3 @@
+"""
+Transactions app initialization.
+"""

@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Prediction Explainability{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Prediction Explainability</h1>
+        <a href="{% url 'ml_engine:prediction_detail' prediction_id=prediction.id %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to Prediction
+        </a>
+    </div>
+
+    <!-- Prediction Info Row -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Prediction Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table">
+                                <tbody>
+                                    <tr>
+                                        <th>Transaction ID:</th>
+                                        <td>{{ prediction.transaction_id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Model:</th>
+                                        <td>{{ prediction.model.name }} v{{ prediction.model.version }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Risk Score:</th>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar 
+                                                    {% if prediction.prediction >= 80 %}bg-danger
+                                                    {% elif prediction.prediction >= 50 %}bg-warning
+                                                    {% else %}bg-success{% endif %}" 
+                                                    role="progressbar" 
+                                                    style="width: {{ prediction.prediction }}%;" 
+                                                    aria-valuenow="{{ prediction.prediction }}" 
+                                                    aria-valuemin="0" 
+                                                    aria-valuemax="100">
+                                                    {{ prediction.prediction|floatformat:2 }}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Prediction Time:</th>
+                                        <td>{{ prediction.created_at }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Execution Time:</th>
+                                        <td>{{ prediction.execution_time|floatformat:2 }} ms</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold text-primary">Explanation Summary</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p>{{ explanation.summary }}</p>
+                                    <p><strong>Model Confidence:</strong> {{ explanation.model_confidence|floatformat:2 }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Factors Row -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-danger">Risk Factors</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Feature</th>
+                                    <th>Value</th>
+                                    <th>Importance</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for factor in explanation.risk_factors %}
+                                <tr>
+                                    <td>{{ factor.name }}</td>
+                                    <td>{{ factor.value }}</td>
+                                    <td>{{ factor.importance|floatformat:3 }}</td>
+                                    <td>{{ factor.description }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No risk factors identified</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">Protective Factors</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Feature</th>
+                                    <th>Value</th>
+                                    <th>Importance</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for factor in explanation.protective_factors %}
+                                <tr>
+                                    <td>{{ factor.name }}</td>
+                                    <td>{{ factor.value }}</td>
+                                    <td>{{ factor.importance|floatformat:3 }}</td>
+                                    <td>{{ factor.description }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No protective factors identified</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Importance Plot Row -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Feature Importance</h6>
+                </div>
+                <div class="card-body">
+                    {% if explanation.feature_importance_plot %}
+                    <div class="text-center">
+                        <img src="data:image/png;base64,{{ explanation.feature_importance_plot }}" class="img-fluid" alt="Feature Importance Plot">
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        Feature importance plot not available for this prediction.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw Features Row -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Raw Features</h6>
+                    <button class="btn btn-sm btn-primary" type="button" data-toggle="collapse" data-target="#rawFeaturesCollapse" aria-expanded="false" aria-controls="rawFeaturesCollapse">
+                        <i class="fas fa-eye"></i> Show/Hide
+                    </button>
+                </div>
+                <div class="collapse" id="rawFeaturesCollapse">
+                    <div class="card-body">
+                        <pre class="bg-light p-3 rounded">{{ prediction.features|pprint }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw Explanation Row -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Raw Explanation</h6>
+                    <button class="btn btn-sm btn-primary" type="button" data-toggle="collapse" data-target="#rawExplanationCollapse" aria-expanded="false" aria-controls="rawExplanationCollapse">
+                        <i class="fas fa-eye"></i> Show/Hide
+                    </button>
+                </div>
+                <div class="collapse" id="rawExplanationCollapse">
+                    <div class="card-body">
+                        <pre class="bg-light p-3 rounded">{{ prediction.explanation|pprint }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

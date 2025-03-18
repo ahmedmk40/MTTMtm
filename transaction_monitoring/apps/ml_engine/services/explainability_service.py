@@ -1,0 +1,265 @@
+"""
+Explainability service for ML models.
+
+This service provides methods for generating explanations for ML model predictions.
+"""
+
+import logging
+import numpy as np
+from typing import Dict, Any, List, Optional
+import matplotlib.pyplot as plt
+import io
+import base64
+
+logger = logging.getLogger(__name__)
+
+
+def generate_feature_importance_plot(feature_importance: Dict[str, float], 
+                                     top_n: int = 10) -> Optional[str]:
+    """
+    Generate a feature importance plot.
+    
+    Args:
+        feature_importance: Dictionary mapping feature names to importance values
+        top_n: Number of top features to include in the plot
+        
+    Returns:
+        Base64-encoded PNG image of the plot, or None if generation fails
+    """
+    try:
+        # Sort features by importance
+        sorted_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
+        
+        # Take top N features
+        top_features = sorted_features[:top_n]
+        
+        # Extract feature names and importance values
+        feature_names = [f[0] for f in top_features]
+        importance_values = [f[1] for f in top_features]
+        
+        # Create plot
+        plt.figure(figsize=(10, 6))
+        bars = plt.barh(feature_names, importance_values, color='skyblue')
+        
+        # Add values to the bars
+        for bar in bars:
+            width = bar.get_width()
+            plt.text(width + 0.01, bar.get_y() + bar.get_height()/2, 
+                     f'{width:.3f}', ha='left', va='center')
+        
+        plt.xlabel('Importance')
+        plt.ylabel('Feature')
+        plt.title(f'Top {top_n} Feature Importance')
+        plt.tight_layout()
+        
+        # Save plot to a bytes buffer
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        plt.close()
+        
+        # Encode the image to base64
+        buf.seek(0)
+        img_str = base64.b64encode(buf.read()).decode('utf-8')
+        
+        return img_str
+    
+    except Exception as e:
+        logger.error(f"Error generating feature importance plot: {str(e)}", exc_info=True)
+        return None
+
+
+def generate_prediction_explanation(prediction_result: Dict[str, Any], 
+                                    features: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Generate a comprehensive explanation for a prediction.
+    
+    Args:
+        prediction_result: Dictionary with prediction results
+        features: Dictionary of features used for the prediction
+        
+    Returns:
+        Dictionary with explanation components
+    """
+    explanation = {
+        'summary': '',
+        'key_factors': [],
+        'risk_factors': [],
+        'protective_factors': [],
+        'feature_importance_plot': None,
+        'model_confidence': 0.0,
+    }
+    
+    try:
+        # Extract risk score and model information
+        risk_score = prediction_result.get('risk_score', 0)
+        model_name = prediction_result.get('model_name', 'Unknown')
+        model_scores = prediction_result.get('model_scores', {})
+        
+        # Generate summary
+        if risk_score >= 80:
+            risk_level = "HIGH"
+        elif risk_score >= 50:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "LOW"
+        
+        explanation['summary'] = (
+            f"Transaction received a {risk_level} risk score of {risk_score:.2f}. "
+            f"This assessment was primarily based on the {model_name} model."
+        )
+        
+        # Add model confidence
+        # For simplicity, we'll use a heuristic based on the risk score
+        # In a real system, this would come from the model's confidence score
+        if risk_score > 90 or risk_score < 10:
+            confidence = 0.9  # High confidence for extreme scores
+        elif 40 <= risk_score <= 60:
+            confidence = 0.6  # Lower confidence for borderline cases
+        else:
+            confidence = 0.75  # Moderate confidence for other cases
+            
+        explanation['model_confidence'] = confidence
+        
+        # Extract top features from the prediction result
+        top_features = prediction_result.get('explanation', {}).get('top_features', [])
+        
+        # Categorize features as risk or protective factors
+        for feature in top_features:
+            feature_name = feature.get('name', '')
+            feature_importance = feature.get('importance', 0)
+            feature_value = feature.get('value', features.get(feature_name, 'N/A'))
+            
+            factor = {
+                'name': feature_name,
+                'importance': feature_importance,
+                'value': feature_value,
+                'description': get_feature_description(feature_name, feature_value)
+            }
+            
+            explanation['key_factors'].append(factor)
+            
+            # Categorize as risk or protective factor
+            # This is a simplified approach - in a real system, you'd have more sophisticated logic
+            if is_risk_factor(feature_name, feature_value):
+                explanation['risk_factors'].append(factor)
+            else:
+                explanation['protective_factors'].append(factor)
+        
+        # Generate feature importance plot
+        feature_importance = prediction_result.get('explanation', {}).get('feature_importance', {})
+        if feature_importance:
+            explanation['feature_importance_plot'] = generate_feature_importance_plot(feature_importance)
+        
+    except Exception as e:
+        logger.error(f"Error generating prediction explanation: {str(e)}", exc_info=True)
+        explanation['summary'] = "Could not generate explanation due to an error."
+    
+    return explanation
+
+
+def get_feature_description(feature_name: str, feature_value: Any) -> str:
+    """
+    Get a human-readable description of a feature.
+    
+    Args:
+        feature_name: Name of the feature
+        feature_value: Value of the feature
+        
+    Returns:
+        Human-readable description
+    """
+    # This is a simplified implementation
+    # In a real system, you'd have a more comprehensive mapping of features to descriptions
+    
+    descriptions = {
+        'amount': f"Transaction amount of {feature_value}",
+        'is_new_card': "This is a new card that hasn't been used before" if feature_value else "Card has been used before",
+        'is_high_risk_country': "Transaction is from a high-risk country" if feature_value else "Transaction is from a low-risk country",
+        'is_night': "Transaction occurred during night hours" if feature_value else "Transaction occurred during day hours",
+        'is_suspicious_mcc': "Merchant category is considered high-risk" if feature_value else "Merchant category is not high-risk",
+        'user_weighted_degree': f"User has a network connection strength of {feature_value}",
+        'merchant_weighted_degree': f"Merchant has a network connection strength of {feature_value}",
+        'user_avg_transaction': f"User's average transaction amount is {feature_value}",
+        'merchant_avg_transaction': f"Merchant's average transaction amount is {feature_value}",
+        'tx_count_1min': f"{feature_value} transactions in the last minute",
+        'tx_count_5min': f"{feature_value} transactions in the last 5 minutes",
+        'tx_count_15min': f"{feature_value} transactions in the last 15 minutes",
+        'tx_count_1hour': f"{feature_value} transactions in the last hour",
+        'amount_1min': f"Total amount of {feature_value} in the last minute",
+        'amount_5min': f"Total amount of {feature_value} in the last 5 minutes",
+        'merchant_count_1hour': f"{feature_value} different merchants in the last hour",
+        'location_count_1hour': f"{feature_value} different locations in the last hour",
+    }
+    
+    return descriptions.get(feature_name, f"{feature_name}: {feature_value}")
+
+
+def is_risk_factor(feature_name: str, feature_value: Any) -> bool:
+    """
+    Determine if a feature is a risk factor.
+    
+    Args:
+        feature_name: Name of the feature
+        feature_value: Value of the feature
+        
+    Returns:
+        True if the feature is a risk factor, False otherwise
+    """
+    # This is a simplified implementation
+    # In a real system, you'd have more sophisticated logic
+    
+    # Features that are risk factors when True/high
+    risk_when_high = [
+        'amount', 'is_new_card', 'is_high_risk_country', 'is_night', 'is_suspicious_mcc',
+        'tx_count_1min', 'tx_count_5min', 'tx_count_15min', 'tx_count_1hour',
+        'amount_1min', 'amount_5min', 'amount_15min', 'amount_1hour',
+        'merchant_count_1hour', 'location_count_1hour', 'device_count_1hour',
+        'ip_count_1hour', 'failed_tx_count_1hour'
+    ]
+    
+    # Features that are protective factors when True/high
+    protective_when_high = [
+        'user_age', 'account_age', 'transaction_history_length'
+    ]
+    
+    if feature_name in risk_when_high:
+        # For boolean features
+        if isinstance(feature_value, bool):
+            return feature_value
+        # For numeric features, consider high values as risk factors
+        elif isinstance(feature_value, (int, float)):
+            thresholds = {
+                'amount': 1000,
+                'tx_count_1min': 1,
+                'tx_count_5min': 3,
+                'tx_count_15min': 5,
+                'tx_count_1hour': 10,
+                'amount_1min': 200,
+                'amount_5min': 500,
+                'amount_15min': 1000,
+                'amount_1hour': 2000,
+                'merchant_count_1hour': 3,
+                'location_count_1hour': 2,
+                'device_count_1hour': 1,
+                'ip_count_1hour': 1,
+                'failed_tx_count_1hour': 1
+            }
+            threshold = thresholds.get(feature_name, 0)
+            return feature_value > threshold
+    
+    elif feature_name in protective_when_high:
+        # For boolean features
+        if isinstance(feature_value, bool):
+            return not feature_value
+        # For numeric features, consider low values as risk factors
+        elif isinstance(feature_value, (int, float)):
+            thresholds = {
+                'user_age': 30,  # days
+                'account_age': 90,  # days
+                'transaction_history_length': 10  # transactions
+            }
+            threshold = thresholds.get(feature_name, 0)
+            return feature_value < threshold
+    
+    # Default to not a risk factor
+    return False

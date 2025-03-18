@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rule Execution Details - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:execution_list' %}">Rule Executions</a></li>
+                    <li class="breadcrumb-item active">Execution #{{ execution.id }}</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Rule Execution Details</h1>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Execution Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Execution ID:</div>
+                        <div class="col-md-8">{{ execution.id }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Rule:</div>
+                        <div class="col-md-8">
+                            <a href="{% url 'rule_engine:detail' execution.rule.id %}">{{ execution.rule.name }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Transaction ID:</div>
+                        <div class="col-md-8">{{ execution.transaction_id }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Result:</div>
+                        <div class="col-md-8">
+                            {% if execution.triggered %}
+                            <span class="badge bg-danger">Triggered</span>
+                            {% else %}
+                            <span class="badge bg-success">Not Triggered</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Execution Time:</div>
+                        <div class="col-md-8">{{ execution.execution_time|floatformat:2 }} ms</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Timestamp:</div>
+                        <div class="col-md-8">{{ execution.created_at }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rule Condition</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="p-3 bg-light rounded"><code>{{ execution.rule.condition }}</code></pre>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Condition Values</h5>
+                </div>
+                <div class="card-body">
+                    {% if execution.condition_values %}
+                    <pre class="p-3 bg-light rounded"><code>{{ execution.condition_values|pprint }}</code></pre>
+                    {% else %}
+                    <p class="text-center text-muted">No condition values recorded for this execution.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Related Executions</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Rule</th>
+                                    <th>Result</th>
+                                    <th>Execution Time</th>
+                                    <th>Timestamp</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for related in related_executions %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'rule_engine:detail' related.rule.id %}">{{ related.rule.name }}</a>
+                                    </td>
+                                    <td>
+                                        {% if related.triggered %}
+                                        <span class="badge bg-danger">Triggered</span>
+                                        {% else %}
+                                        <span class="badge bg-success">Not Triggered</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ related.execution_time|floatformat:2 }} ms</td>
+                                    <td>{{ related.created_at }}</td>
+                                    <td>
+                                        <a href="{% url 'rule_engine:execution_detail' related.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-3">No related executions found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

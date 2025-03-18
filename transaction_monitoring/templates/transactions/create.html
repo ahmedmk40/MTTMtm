@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if process_transaction %}Create & Process Transaction{% else %}Create Transaction{% endif %} - Transaction Monitoring System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid #e3e6f0;
+        border-radius: 5px;
+        background-color: #f8f9fc;
+    }
+    
+    .form-section-title {
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e3e6f0;
+    }
+    
+    .field-group {
+        margin-bottom: 20px;
+    }
+    
+    .hidden {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">{% if process_transaction %}Create & Process Transaction{% else %}Create New Transaction{% endif %}</h1>
+        {% if process_transaction %}
+        <p class="lead">Create a transaction and process it through the fraud detection system</p>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Transaction Details</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="transaction-form">
+                        {% csrf_token %}
+                        
+                        <!-- Common Transaction Fields -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">Basic Information</h5>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ form.transaction_type|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.channel|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.user_id|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ form.amount|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.currency|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.merchant_id|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.device_id|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.metadata_notes|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Location Data -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">Location Information</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.location_latitude|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.location_longitude|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ form.location_city|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.location_country|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.location_postal_code|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Payment Method Data -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">Payment Method</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.payment_method_type|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <!-- Card Details (shown/hidden based on payment method) -->
+                            <div id="card-details" class="field-group">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {{ form.card_number|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.cardholder_name|as_crispy_field }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {{ form.card_expiry|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.card_cvv|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- POS Transaction Fields -->
+                        <div id="pos-fields" class="form-section channel-specific">
+                            <h5 class="form-section-title">POS Transaction Details</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.terminal_id|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.terminal_type|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ form.entry_mode|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.attendance|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.condition|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- E-commerce Transaction Fields -->
+                        <div id="ecommerce-fields" class="form-section channel-specific">
+                            <h5 class="form-section-title">E-commerce Transaction Details</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.website_url|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.device_fingerprint|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-check mb-3">
+                                        {{ form.is_3ds_verified }}
+                                        <label class="form-check-label" for="{{ form.is_3ds_verified.id_for_label }}">
+                                            {{ form.is_3ds_verified.label }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Shipping Address -->
+                            <h6 class="mb-3">Shipping Address</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.shipping_street|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.shipping_city|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ form.shipping_state|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.shipping_postal_code|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.shipping_country|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <!-- Billing Address -->
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <div class="form-check mb-3">
+                                        {{ form.billing_same_as_shipping }}
+                                        <label class="form-check-label" for="{{ form.billing_same_as_shipping.id_for_label }}">
+                                            {{ form.billing_same_as_shipping.label }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="billing-address-fields">
+                                <h6 class="mb-3">Billing Address</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {{ form.billing_street|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.billing_city|as_crispy_field }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        {{ form.billing_state|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        {{ form.billing_postal_code|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        {{ form.billing_country|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Wallet Transaction Fields -->
+                        <div id="wallet-fields" class="form-section channel-specific">
+                            <h5 class="form-section-title">Wallet Transaction Details</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.wallet_id|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.transaction_purpose|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.source_type|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.source_id|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.destination_type|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.destination_id|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-check mb-3">
+                                        {{ form.is_internal }}
+                                        <label class="form-check-label" for="{{ form.is_internal.id_for_label }}">
+                                            {{ form.is_internal.label }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary">{% if process_transaction %}Process Transaction{% else %}Submit Transaction{% endif %}</button>
+                            <a href="{% url 'transactions:list' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Function to show/hide fields based on channel selection
+        function toggleChannelFields() {
+            var channel = $('#id_channel').val();
+            
+            // Hide all channel-specific fields
+            $('.channel-specific').hide();
+            
+            // Show fields based on selected channel
+            if (channel === 'pos') {
+                $('#pos-fields').show();
+            } else if (channel === 'ecommerce') {
+                $('#ecommerce-fields').show();
+            } else if (channel === 'wallet') {
+                $('#wallet-fields').show();
+            }
+        }
+        
+        // Function to show/hide card details based on payment method
+        function togglePaymentMethodFields() {
+            var paymentMethod = $('#id_payment_method_type').val();
+            
+            if (paymentMethod === 'credit_card' || paymentMethod === 'debit_card') {
+                $('#card-details').show();
+            } else {
+                $('#card-details').hide();
+            }
+        }
+        
+        // Function to toggle billing address fields
+        function toggleBillingAddressFields() {
+            var sameAsShipping = $('#id_billing_same_as_shipping').is(':checked');
+            
+            if (sameAsShipping) {
+                $('#billing-address-fields').hide();
+            } else {
+                $('#billing-address-fields').show();
+            }
+        }
+        
+        // Initial setup
+        toggleChannelFields();
+        togglePaymentMethodFields();
+        toggleBillingAddressFields();
+        
+        // Event listeners
+        $('#id_channel').change(toggleChannelFields);
+        $('#id_payment_method_type').change(togglePaymentMethodFields);
+        $('#id_billing_same_as_shipping').change(toggleBillingAddressFields);
+    });
+</script>
+{% endblock %}

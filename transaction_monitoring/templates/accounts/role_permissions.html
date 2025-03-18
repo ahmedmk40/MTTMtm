@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Role Permissions - Transaction Monitoring System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .permission-group {
+        margin-bottom: 20px;
+        border: 1px solid #e3e6f0;
+        border-radius: 0.35rem;
+    }
+    
+    .permission-group-header {
+        background-color: #f8f9fc;
+        padding: 10px 15px;
+        border-bottom: 1px solid #e3e6f0;
+        font-weight: bold;
+    }
+    
+    .permission-group-body {
+        padding: 15px;
+    }
+    
+    .permission-model {
+        margin-bottom: 15px;
+    }
+    
+    .permission-model-header {
+        font-weight: bold;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #e3e6f0;
+    }
+    
+    .permission-item {
+        margin-bottom: 5px;
+    }
+    
+    .select-all-btn {
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:user_list' %}">User Management</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:role_list' %}">Roles</a></li>
+                    <li class="breadcrumb-item active">Role Permissions</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Manage Permissions for Role: {{ role.name }}</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Permissions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle mr-2"></i> 
+                        Select the permissions you want to assign to this role. Users with this role will be granted these permissions.
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <button type="button" class="btn btn-outline-primary btn-sm select-all-btn" id="selectAll">
+                                    <i class="fas fa-check-square mr-1"></i> Select All
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm select-all-btn" id="deselectAll">
+                                    <i class="fas fa-square mr-1"></i> Deselect All
+                                </button>
+                            </div>
+                        </div>
+                        
+                        {% for app_label, content_types in grouped_content_types.items %}
+                            <div class="permission-group">
+                                <div class="permission-group-header">
+                                    {{ app_label|title }} Application
+                                    <button type="button" class="btn btn-outline-primary btn-sm float-right select-app" data-app="{{ app_label }}">
+                                        <i class="fas fa-check-square mr-1"></i> Select All
+                                    </button>
+                                </div>
+                                <div class="permission-group-body">
+                                    {% for content_type in content_types %}
+                                        <div class="permission-model">
+                                            <div class="permission-model-header">
+                                                {{ content_type.model|title }} Model
+                                                <button type="button" class="btn btn-outline-primary btn-sm float-right select-model" data-app="{{ app_label }}" data-model="{{ content_type.model }}">
+                                                    <i class="fas fa-check-square mr-1"></i> Select All
+                                                </button>
+                                            </div>
+                                            <div class="row">
+                                                {% for field_name, field in form.fields.items %}
+                                                    {% if field.widget.attrs.data_app == app_label and field.widget.attrs.data_model == content_type.model %}
+                                                        <div class="col-md-3 permission-item">
+                                                            <div class="form-check">
+                                                                {{ form|get_attr:field_name }}
+                                                                <label class="form-check-label" for="id_{{ field_name }}">
+                                                                    {{ field.label }}
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                        
+                        <div class="form-group text-center mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save mr-2"></i> Save Permissions
+                            </button>
+                            <a href="{% url 'accounts:role_list' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times mr-2"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select all permissions
+        document.getElementById('selectAll').addEventListener('click', function() {
+            document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
+                checkbox.checked = true;
+            });
+        });
+        
+        // Deselect all permissions
+        document.getElementById('deselectAll').addEventListener('click', function() {
+            document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
+                checkbox.checked = false;
+            });
+        });
+        
+        // Select all permissions for an app
+        document.querySelectorAll('.select-app').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var app = this.getAttribute('data-app');
+                document.querySelectorAll('input[data_app="' + app + '"]').forEach(function(checkbox) {
+                    checkbox.checked = true;
+                });
+            });
+        });
+        
+        // Select all permissions for a model
+        document.querySelectorAll('.select-model').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var app = this.getAttribute('data-app');
+                var model = this.getAttribute('data-model');
+                document.querySelectorAll('input[data_app="' + app + '"][data_model="' + model + '"]').forEach(function(checkbox) {
+                    checkbox.checked = true;
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

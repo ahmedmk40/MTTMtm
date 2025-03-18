@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Blocklist Entry - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'fraud_engine:dashboard' %}">Fraud Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'fraud_engine:blocklist' %}">Blocklist</a></li>
+                    <li class="breadcrumb-item active">Delete Entry</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Delete Blocklist Entry</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Confirm Deletion</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle mr-2"></i> 
+                        <strong>Warning:</strong> You are about to delete a blocklist entry. This action cannot be undone.
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Entry Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Entity Type:</div>
+                                <div class="col-md-8">{{ entry.get_entity_type_display }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Entity Value:</div>
+                                <div class="col-md-8">
+                                    {% if entry.entity_type == 'card_number' %}
+                                        <span class="text-muted">MASKED</span>
+                                    {% else %}
+                                        {{ entry.entity_value }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Reason:</div>
+                                <div class="col-md-8">{{ entry.reason }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Status:</div>
+                                <div class="col-md-8">
+                                    {% if entry.is_active %}
+                                        {% if entry.expires_at and entry.expires_at < now %}
+                                            <span class="badge badge-secondary">Expired</span>
+                                        {% else %}
+                                            <span class="badge badge-success">Active</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge badge-secondary">Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Added By:</div>
+                                <div class="col-md-8">{{ entry.added_by }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Added On:</div>
+                                <div class="col-md-8">{{ entry.created_at|date:"F d, Y H:i" }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Expires:</div>
+                                <div class="col-md-8">
+                                    {% if entry.expires_at %}
+                                        {{ entry.expires_at|date:"F d, Y H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <p>
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <strong>Alternative:</strong> Instead of deleting this entry, you can also deactivate it by setting its status to inactive.
+                            <a href="{% url 'fraud_engine:blocklist_edit' entry.id %}" class="btn btn-sm btn-info ml-2">
+                                <i class="fas fa-edit mr-1"></i> Edit Entry
+                            </a>
+                        </p>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash mr-2"></i> Confirm Delete
+                            </button>
+                            <a href="{% url 'fraud_engine:blocklist' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times mr-2"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

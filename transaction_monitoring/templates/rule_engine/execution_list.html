@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rule Executions - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">Rule Executions</h1>
+                <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                    <i class="fas fa-filter me-2"></i> Filter
+                </button>
+            </div>
+            
+            <div class="collapse mb-4" id="filterCollapse">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="get" action="{% url 'rule_engine:execution_list' %}" class="row g-3">
+                            <div class="col-md-3">
+                                <label for="rule_id" class="form-label">Rule</label>
+                                <select name="rule_id" id="rule_id" class="form-select">
+                                    <option value="">All Rules</option>
+                                    {% for rule in rules %}
+                                    <option value="{{ rule.id }}" {% if filter_rule_id == rule.id|stringformat:"s" %}selected{% endif %}>{{ rule.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="triggered" class="form-label">Result</label>
+                                <select name="triggered" id="triggered" class="form-select">
+                                    <option value="">All</option>
+                                    <option value="true" {% if filter_triggered == 'true' %}selected{% endif %}>Triggered</option>
+                                    <option value="false" {% if filter_triggered == 'false' %}selected{% endif %}>Not Triggered</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="transaction_id" class="form-label">Transaction ID</label>
+                                <input type="text" name="transaction_id" id="transaction_id" class="form-control" placeholder="Transaction ID" value="{{ filter_transaction_id }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="datetime-local" name="start_date" id="start_date" class="form-control" value="{{ filter_start_date }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="datetime-local" name="end_date" id="end_date" class="form-control" value="{{ filter_end_date }}">
+                            </div>
+                            <div class="col-md-12 d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary me-2">Apply</button>
+                                <a href="{% url 'rule_engine:execution_list' %}" class="btn btn-outline-secondary">Reset</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Executions</h5>
+                    <h2 class="display-4">{{ execution_stats.total }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Triggered</h5>
+                    <h2 class="display-4">{{ execution_stats.triggered }}</h2>
+                    <p class="text-muted">{{ execution_stats.trigger_rate|floatformat:1 }}% of total</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Not Triggered</h5>
+                    <h2 class="display-4">{{ execution_stats.not_triggered }}</h2>
+                    <p class="text-muted">{{ execution_stats.not_triggered_rate|floatformat:1 }}% of total</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Avg. Execution Time</h5>
+                    <h2 class="display-4">{{ execution_stats.avg_execution_time|floatformat:2 }}</h2>
+                    <p class="text-muted">milliseconds</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Execution History</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Rule</th>
+                                    <th>Transaction ID</th>
+                                    <th>Result</th>
+                                    <th>Execution Time</th>
+                                    <th>Timestamp</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for execution in page_obj %}
+                                <tr>
+                                    <td>{{ execution.id }}</td>
+                                    <td>
+                                        <a href="{% url 'rule_engine:detail' execution.rule.id %}">{{ execution.rule.name }}</a>
+                                    </td>
+                                    <td>{{ execution.transaction_id }}</td>
+                                    <td>
+                                        {% if execution.triggered %}
+                                        <span class="badge bg-danger">Triggered</span>
+                                        {% else %}
+                                        <span class="badge bg-success">Not Triggered</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ execution.execution_time|floatformat:2 }} ms</td>
+                                    <td>{{ execution.created_at }}</td>
+                                    <td>
+                                        <a href="{% url 'rule_engine:execution_detail' execution.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <p class="mb-0">No executions found matching your criteria.</p>
+                                        {% if filter_rule_id or filter_triggered or filter_transaction_id or filter_start_date or filter_end_date %}
+                                        <a href="{% url 'rule_engine:execution_list' %}" class="btn btn-sm btn-outline-primary mt-2">Clear Filters</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% if page_obj.has_other_pages %}
+                <div class="card-footer">
+                    <nav aria-label="Execution pagination">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filter_rule_id %}rule_id={{ filter_rule_id }}&{% endif %}{% if filter_triggered %}triggered={{ filter_triggered }}&{% endif %}{% if filter_transaction_id %}transaction_id={{ filter_transaction_id }}&{% endif %}{% if filter_start_date %}start_date={{ filter_start_date }}&{% endif %}{% if filter_end_date %}end_date={{ filter_end_date }}&{% endif %}page=1">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filter_rule_id %}rule_id={{ filter_rule_id }}&{% endif %}{% if filter_triggered %}triggered={{ filter_triggered }}&{% endif %}{% if filter_transaction_id %}transaction_id={{ filter_transaction_id }}&{% endif %}{% if filter_start_date %}start_date={{ filter_start_date }}&{% endif %}{% if filter_end_date %}end_date={{ filter_end_date }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if filter_rule_id %}rule_id={{ filter_rule_id }}&{% endif %}{% if filter_triggered %}triggered={{ filter_triggered }}&{% endif %}{% if filter_transaction_id %}transaction_id={{ filter_transaction_id }}&{% endif %}{% if filter_start_date %}start_date={{ filter_start_date }}&{% endif %}{% if filter_end_date %}end_date={{ filter_end_date }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filter_rule_id %}rule_id={{ filter_rule_id }}&{% endif %}{% if filter_triggered %}triggered={{ filter_triggered }}&{% endif %}{% if filter_transaction_id %}transaction_id={{ filter_transaction_id }}&{% endif %}{% if filter_start_date %}start_date={{ filter_start_date }}&{% endif %}{% if filter_end_date %}end_date={{ filter_end_date }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filter_rule_id %}rule_id={{ filter_rule_id }}&{% endif %}{% if filter_triggered %}triggered={{ filter_triggered }}&{% endif %}{% if filter_transaction_id %}transaction_id={{ filter_transaction_id }}&{% endif %}{% if filter_start_date %}start_date={{ filter_start_date }}&{% endif %}{% if filter_end_date %}end_date={{ filter_end_date }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Last</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

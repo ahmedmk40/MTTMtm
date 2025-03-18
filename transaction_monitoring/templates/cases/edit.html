@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Case {{ case.case_id }} - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard:index' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'cases:list' %}">Cases</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'cases:detail' case.case_id %}">{{ case.case_id }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Edit</li>
+                </ol>
+            </nav>
+            <h1 class="h2">Edit Case: {{ case.title }}</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" action="{% url 'cases:edit' case.case_id %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.title.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.description.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.priority.id_for_label }}" class="form-label">Priority</label>
+                                {{ form.priority }}
+                                {% if form.priority.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.priority.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                                {{ form.status }}
+                                {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.status.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if case.status == 'closed' %}
+                        <div class="mb-3">
+                            <label for="{{ form.resolution.id_for_label }}" class="form-label">Resolution</label>
+                            {{ form.resolution }}
+                            {% if form.resolution.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.resolution.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.assigned_to.id_for_label }}" class="form-label">Assign To</label>
+                            {{ form.assigned_to }}
+                            {% if form.assigned_to.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.assigned_to.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'cases:detail' case.case_id %}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Case Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tbody>
+                            <tr>
+                                <th scope="row">Case ID</th>
+                                <td>{{ case.case_id }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Created</th>
+                                <td>{{ case.created_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Created By</th>
+                                <td>{{ case.created_by }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Last Updated</th>
+                                <td>{{ case.updated_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            {% if case.closed_at %}
+                            <tr>
+                                <th scope="row">Closed</th>
+                                <td>{{ case.closed_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Help</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Status Options</h6>
+                    <ul>
+                        <li><strong>Open</strong> - Case has been created but work has not started</li>
+                        <li><strong>In Progress</strong> - Investigation is underway</li>
+                        <li><strong>Pending Review</strong> - Investigation complete, awaiting final review</li>
+                        <li><strong>Closed</strong> - Case has been resolved</li>
+                    </ul>
+                    
+                    {% if case.status == 'closed' %}
+                    <h6>Resolution Options</h6>
+                    <ul>
+                        <li><strong>Confirmed Fraud</strong> - Investigation confirmed fraudulent activity</li>
+                        <li><strong>False Positive</strong> - Investigation determined no fraud occurred</li>
+                        <li><strong>Inconclusive</strong> - Unable to determine if fraud occurred</li>
+                        <li><strong>Legitimate</strong> - Transaction confirmed as legitimate</li>
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

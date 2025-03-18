@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Model Performance - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:analytics' %}">Analytics</a></li>
+                    <li class="breadcrumb-item active">Model Performance</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Model Performance Comparison</h1>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="form-inline">
+                        <div class="form-group mb-2 mr-3">
+                            <label for="model_type" class="mr-2">Model Type:</label>
+                            <select name="model_type" id="model_type" class="form-control">
+                                <option value="">All Types</option>
+                                {% for type_code, type_name in model_types %}
+                                <option value="{{ type_code }}" {% if filter_model_type == type_code %}selected{% endif %}>{{ type_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary mb-2">Apply Filters</button>
+                        <a href="{% url 'ml_engine:model_performance' %}" class="btn btn-secondary mb-2 ml-2">Clear Filters</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Comparison Chart -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Performance Metrics Comparison</h6>
+                </div>
+                <div class="card-body">
+                    {% if models %}
+                        <div class="chart-bar">
+                            <canvas id="modelPerformanceChart"></canvas>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No model performance data available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Metrics Table -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Performance Metrics</h6>
+                </div>
+                <div class="card-body">
+                    {% if models %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Model Name</th>
+                                        <th>Version</th>
+                                        <th>Type</th>
+                                        <th>Accuracy</th>
+                                        <th>Precision</th>
+                                        <th>Recall</th>
+                                        <th>F1 Score</th>
+                                        <th>AUC-ROC</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for model in models %}
+                                    <tr>
+                                        <td>{{ model.name }}</td>
+                                        <td>{{ model.version }}</td>
+                                        <td>{{ model.get_model_type_display }}</td>
+                                        <td>{{ model.accuracy|floatformat:2 }}</td>
+                                        <td>{{ model.precision|floatformat:2 }}</td>
+                                        <td>{{ model.recall|floatformat:2 }}</td>
+                                        <td>{{ model.f1_score|floatformat:2 }}</td>
+                                        <td>{{ model.auc_roc|floatformat:2|default:"-" }}</td>
+                                        <td>
+                                            <a href="{% url 'ml_engine:model_detail' model.id %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No model performance data available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if models %}
+        // Model Performance Chart
+        var performanceCtx = document.getElementById('modelPerformanceChart').getContext('2d');
+        var performanceChart = new Chart(performanceCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for model in models %}
+                        "{{ model.name }} v{{ model.version }}"{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [
+                    {
+                        label: 'Accuracy',
+                        backgroundColor: 'rgba(78, 115, 223, 0.8)',
+                        data: [
+                            {% for model in models %}
+                                {{ model.accuracy|floatformat:2 }}{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ]
+                    },
+                    {
+                        label: 'Precision',
+                        backgroundColor: 'rgba(28, 200, 138, 0.8)',
+                        data: [
+                            {% for model in models %}
+                                {{ model.precision|floatformat:2 }}{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ]
+                    },
+                    {
+                        label: 'Recall',
+                        backgroundColor: 'rgba(246, 194, 62, 0.8)',
+                        data: [
+                            {% for model in models %}
+                                {{ model.recall|floatformat:2 }}{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ]
+                    },
+                    {
+                        label: 'F1 Score',
+                        backgroundColor: 'rgba(231, 74, 59, 0.8)',
+                        data: [
+                            {% for model in models %}
+                                {{ model.f1_score|floatformat:2 }}{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ]
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            min: 0,
+                            max: 1,
+                            maxTicksLimit: 5
+                        }
+                    }],
+                    xAxes: [{
+                        ticks: {
+                            maxTicksLimit: 10
+                        }
+                    }]
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %}

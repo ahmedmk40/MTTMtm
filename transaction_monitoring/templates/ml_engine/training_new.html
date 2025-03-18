@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}New Training Job - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:training_dashboard' %}">Training</a></li>
+                    <li class="breadcrumb-item active">New Training Job</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">New Training Job</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Training Configuration</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <!-- Model Information -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Model Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group row">
+                                    <div class="col-md-6">
+                                        <label for="model_name">Model Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="model_name" name="model_name" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="version">Version <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="version" name="version" required>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <div class="col-md-12">
+                                        <label for="model_type">Model Type <span class="text-danger">*</span></label>
+                                        <select class="form-control" id="model_type" name="model_type" required>
+                                            {% for type_code, type_name in model_types %}
+                                            <option value="{{ type_code }}">{{ type_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="description">Description <span class="text-danger">*</span></label>
+                                    <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Training Data -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Training Data</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="training_data">Upload Training Data <span class="text-danger">*</span></label>
+                                    <input type="file" class="form-control-file" id="training_data" name="training_data" required>
+                                    <small class="form-text text-muted">Upload a CSV or Excel file containing your training data.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="target_column">Target Column <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="target_column" name="target_column" required>
+                                    <small class="form-text text-muted">The name of the column in your training data that contains the target variable (e.g., "is_fraud").</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="test_size">Test Size</label>
+                                    <input type="number" class="form-control" id="test_size" name="test_size" min="0.1" max="0.5" step="0.05" value="0.2">
+                                    <small class="form-text text-muted">Proportion of the dataset to include in the test split (0.1 to 0.5).</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Training Parameters -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Training Parameters</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle mr-2"></i> Parameters will vary based on the selected model type. Common parameters are shown below.
+                                </div>
+                                
+                                <!-- Common Parameters -->
+                                <div class="form-group row">
+                                    <div class="col-md-4">
+                                        <label for="param_n_estimators">Number of Estimators</label>
+                                        <input type="number" class="form-control" id="param_n_estimators" name="param_n_estimators" value="100">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="param_contamination">Contamination</label>
+                                        <input type="text" class="form-control" id="param_contamination" name="param_contamination" value="auto">
+                                        <small class="form-text text-muted">Expected proportion of outliers in the data. Use "auto" or a float between 0 and 0.5.</small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="param_random_state">Random State</label>
+                                        <input type="number" class="form-control" id="param_random_state" name="param_random_state" value="42">
+                                    </div>
+                                </div>
+                                
+                                <!-- Anomaly Detection Parameters -->
+                                <div id="anomaly_params" class="model-params">
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label for="param_max_samples">Max Samples</label>
+                                            <input type="text" class="form-control" id="param_max_samples" name="param_max_samples" value="auto">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="param_bootstrap">Bootstrap</label>
+                                            <select class="form-control" id="param_bootstrap" name="param_bootstrap">
+                                                <option value="true">True</option>
+                                                <option value="false">False</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Classification Parameters -->
+                                <div id="classification_params" class="model-params" style="display: none;">
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label for="param_max_depth">Max Depth</label>
+                                            <input type="number" class="form-control" id="param_max_depth" name="param_max_depth" value="None">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="param_min_samples_split">Min Samples Split</label>
+                                            <input type="number" class="form-control" id="param_min_samples_split" name="param_min_samples_split" value="2">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Behavioral Analysis Parameters -->
+                                <div id="behavioral_params" class="model-params" style="display: none;">
+                                    <div class="form-group row">
+                                        <div class="col-md-6">
+                                            <label for="param_window_size">Window Size</label>
+                                            <input type="number" class="form-control" id="param_window_size" name="param_window_size" value="10">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="param_threshold">Threshold</label>
+                                            <input type="number" class="form-control" id="param_threshold" name="param_threshold" value="0.8" step="0.1">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-play mr-2"></i> Start Training
+                            </button>
+                            <a href="{% url 'ml_engine:training_dashboard' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times mr-2"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show/hide model-specific parameters based on selected model type
+        const modelTypeSelect = document.getElementById('model_type');
+        const anomalyParams = document.getElementById('anomaly_params');
+        const classificationParams = document.getElementById('classification_params');
+        const behavioralParams = document.getElementById('behavioral_params');
+        
+        modelTypeSelect.addEventListener('change', function() {
+            // Hide all parameter sections
+            anomalyParams.style.display = 'none';
+            classificationParams.style.display = 'none';
+            behavioralParams.style.display = 'none';
+            
+            // Show the relevant section based on selected model type
+            switch(this.value) {
+                case 'anomaly':
+                    anomalyParams.style.display = 'block';
+                    break;
+                case 'classification':
+                    classificationParams.style.display = 'block';
+                    break;
+                case 'behavioral':
+                    behavioralParams.style.display = 'block';
+                    break;
+                // Add more cases as needed
+            }
+        });
+    });
+</script>
+{% endblock %}

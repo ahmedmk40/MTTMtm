@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Feature - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:feature_list' %}">Features</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:feature_detail' feature.id %}">{{ feature.name }}</a></li>
+                    <li class="breadcrumb-item active">Edit</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Edit Feature: {{ feature.name }}</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Feature Information</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-group row">
+                            <div class="col-md-6">
+                                <label for="name">Feature Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ feature.name }}" required>
+                                <small class="form-text text-muted">A unique name for the feature (e.g., "transaction_amount").</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="data_type">Data Type <span class="text-danger">*</span></label>
+                                <select class="form-control" id="data_type" name="data_type" required>
+                                    <option value="numeric" {% if feature.data_type == 'numeric' %}selected{% endif %}>Numeric</option>
+                                    <option value="categorical" {% if feature.data_type == 'categorical' %}selected{% endif %}>Categorical</option>
+                                    <option value="boolean" {% if feature.data_type == 'boolean' %}selected{% endif %}>Boolean</option>
+                                    <option value="datetime" {% if feature.data_type == 'datetime' %}selected{% endif %}>DateTime</option>
+                                    <option value="text" {% if feature.data_type == 'text' %}selected{% endif %}>Text</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="description">Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description" name="description" rows="3" required>{{ feature.description }}</textarea>
+                            <small class="form-text text-muted">A detailed description of what this feature represents and how it's used.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="source">Source <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="source" name="source" value="{{ feature.source }}" required>
+                            <small class="form-text text-muted">The source of the feature data (e.g., "transactions.amount", "customer.age").</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="transformation">Transformation</label>
+                            <textarea class="form-control" id="transformation" name="transformation" rows="3">{{ feature.transformation }}</textarea>
+                            <small class="form-text text-muted">Any transformations applied to the raw data (e.g., "log(x)", "x > 1000", "one-hot encoding").</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" {% if feature.is_active %}checked{% endif %}>
+                                <label class="custom-control-label" for="is_active">Active</label>
+                            </div>
+                            <small class="form-text text-muted">If checked, this feature will be available for use in models.</small>
+                        </div>
+                        
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save mr-2"></i> Save Changes
+                            </button>
+                            <a href="{% url 'ml_engine:feature_detail' feature.id %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times mr-2"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Process Transaction - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1>Process Transaction</h1>
+            <p class="lead">Submit a transaction for fraud detection and processing</p>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Transaction Details</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="process-transaction-form">
+                {% csrf_token %}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <div class="mb-3">
+                            <label for="transaction_id" class="form-label">Transaction ID</label>
+                            <input type="text" class="form-control" id="transaction_id" name="transaction_id" placeholder="Enter transaction ID or leave blank for auto-generation">
+                        </div>
+                        <div class="mb-3">
+                            <label for="transaction_type" class="form-label">Transaction Type*</label>
+                            <select class="form-select" id="transaction_type" name="transaction_type" required>
+                                <option value="acquiring">Acquiring</option>
+                                <option value="wallet">Wallet</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="channel" class="form-label">Channel*</label>
+                            <select class="form-select" id="channel" name="channel" required>
+                                <option value="pos">POS</option>
+                                <option value="ecommerce">E-commerce</option>
+                                <option value="wallet">Wallet</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">User ID*</label>
+                            <input type="text" class="form-control" id="user_id" name="user_id" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Payment Details</h6>
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount*</label>
+                            <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="currency" class="form-label">Currency*</label>
+                            <input type="text" class="form-control" id="currency" name="currency" value="USD" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="merchant_id" class="form-label">Merchant ID</label>
+                            <input type="text" class="form-control" id="merchant_id" name="merchant_id">
+                        </div>
+                        <div class="mb-3">
+                            <label for="device_id" class="form-label">Device ID</label>
+                            <input type="text" class="form-control" id="device_id" name="device_id">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Location Information</h6>
+                        <div class="mb-3">
+                            <label for="city" class="form-label">City</label>
+                            <input type="text" class="form-control" id="city" name="city">
+                        </div>
+                        <div class="mb-3">
+                            <label for="country" class="form-label">Country</label>
+                            <input type="text" class="form-control" id="country" name="country">
+                        </div>
+                        <div class="mb-3">
+                            <label for="postal_code" class="form-label">Postal Code</label>
+                            <input type="text" class="form-control" id="postal_code" name="postal_code">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Payment Method</h6>
+                        <div class="mb-3">
+                            <label for="payment_method_type" class="form-label">Payment Method Type*</label>
+                            <select class="form-select" id="payment_method_type" name="payment_method_type" required>
+                                <option value="credit_card">Credit Card</option>
+                                <option value="debit_card">Debit Card</option>
+                                <option value="wallet">Wallet</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="cash">Cash</option>
+                            </select>
+                        </div>
+                        <div id="card-details">
+                            <div class="mb-3">
+                                <label for="card_number" class="form-label">Card Number</label>
+                                <input type="text" class="form-control" id="card_number" name="card_number">
+                            </div>
+                            <div class="mb-3">
+                                <label for="cardholder_name" class="form-label">Cardholder Name</label>
+                                <input type="text" class="form-control" id="cardholder_name" name="cardholder_name">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="card_expiry" class="form-label">Card Expiry (MM/YY)</label>
+                                    <input type="text" class="form-control" id="card_expiry" name="card_expiry">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="cvv" class="form-label">CVV</label>
+                                    <input type="text" class="form-control" id="cvv" name="cvv">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6>Additional Information</h6>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Additional Notes (Metadata)</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">Process Transaction</button>
+                            <a href="{% url 'transactions:list' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const paymentMethodSelect = document.getElementById('payment_method_type');
+        const cardDetailsDiv = document.getElementById('card-details');
+        
+        function toggleCardDetails() {
+            if (paymentMethodSelect.value === 'credit_card' || paymentMethodSelect.value === 'debit_card') {
+                cardDetailsDiv.style.display = 'block';
+            } else {
+                cardDetailsDiv.style.display = 'none';
+            }
+        }
+        
+        // Initial toggle
+        toggleCardDetails();
+        
+        // Toggle on change
+        paymentMethodSelect.addEventListener('change', toggleCardDetails);
+    });
+</script>
+{% endblock %}

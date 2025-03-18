@@ -1,0 +1,477 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ML Analytics - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item active">Analytics</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">ML Analytics</h1>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Models</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ model_stats.total }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-brain fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Active Models</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ model_stats.active }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Predictions</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ prediction_stats.total }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Avg. Risk Score</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ prediction_stats.avg_risk_score|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="row mb-4">
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Prediction Trend</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="predictionTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Risk Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="riskDistributionChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-center small">
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-danger"></i> High Risk ({{ prediction_stats.high_risk }})
+                        </span>
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-warning"></i> Medium Risk ({{ prediction_stats.medium_risk }})
+                        </span>
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-success"></i> Low Risk ({{ prediction_stats.low_risk }})
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Model Performance Comparison -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Model Performance Comparison</h6>
+                    <a href="{% url 'ml_engine:model_performance' %}" class="btn btn-sm btn-primary">
+                        View Details
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if model_performance %}
+                        <div class="chart-bar">
+                            <canvas id="modelPerformanceChart"></canvas>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No model performance data available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Model Type Distribution -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Model Type Distribution</h6>
+                </div>
+                <div class="card-body">
+                    {% if model_stats.by_type %}
+                        <div class="chart-pie">
+                            <canvas id="modelTypeChart"></canvas>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No model type data available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Feature Importance Analysis</h6>
+                    <a href="{% url 'ml_engine:feature_importance' %}" class="btn btn-sm btn-primary">
+                        View Details
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle mr-2"></i> Select a model in the Feature Importance page to view detailed feature importance analysis.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Risk Distribution Chart
+        var riskCtx = document.getElementById('riskDistributionChart').getContext('2d');
+        var riskChart = new Chart(riskCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+                datasets: [{
+                    data: [
+                        {{ prediction_stats.high_risk }}, 
+                        {{ prediction_stats.medium_risk }}, 
+                        {{ prediction_stats.low_risk }}
+                    ],
+                    backgroundColor: ['#e74a3b', '#f6c23e', '#1cc88a'],
+                    hoverBackgroundColor: ['#be3c2e', '#daa520', '#169a6b'],
+                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                tooltips: {
+                    backgroundColor: "rgb(255,255,255)",
+                    bodyFontColor: "#858796",
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    xPadding: 15,
+                    yPadding: 15,
+                    displayColors: false,
+                    caretPadding: 10,
+                },
+                legend: {
+                    display: false
+                },
+                cutoutPercentage: 80,
+            },
+        });
+        
+        // Prediction Trend Chart
+        var trendCtx = document.getElementById('predictionTrendChart').getContext('2d');
+        var trendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: [
+                    {% for item in prediction_trend %}
+                        "{{ item.date|date:'M d' }}"{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: "Predictions",
+                    lineTension: 0.3,
+                    backgroundColor: "rgba(78, 115, 223, 0.05)",
+                    borderColor: "rgba(78, 115, 223, 1)",
+                    pointRadius: 3,
+                    pointBackgroundColor: "rgba(78, 115, 223, 1)",
+                    pointBorderColor: "rgba(78, 115, 223, 1)",
+                    pointHoverRadius: 3,
+                    pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
+                    pointHoverBorderColor: "rgba(78, 115, 223, 1)",
+                    pointHitRadius: 10,
+                    pointBorderWidth: 2,
+                    data: [
+                        {% for item in prediction_trend %}
+                            {{ item.count }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                },
+                {
+                    label: "Avg Risk Score",
+                    lineTension: 0.3,
+                    backgroundColor: "rgba(231, 74, 59, 0.05)",
+                    borderColor: "rgba(231, 74, 59, 1)",
+                    pointRadius: 3,
+                    pointBackgroundColor: "rgba(231, 74, 59, 1)",
+                    pointBorderColor: "rgba(231, 74, 59, 1)",
+                    pointHoverRadius: 3,
+                    pointHoverBackgroundColor: "rgba(231, 74, 59, 1)",
+                    pointHoverBorderColor: "rgba(231, 74, 59, 1)",
+                    pointHitRadius: 10,
+                    pointBorderWidth: 2,
+                    data: [
+                        {% for item in prediction_trend %}
+                            {{ item.avg_risk|floatformat:2 }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    yAxisID: 'y-axis-2'
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        left: 10,
+                        right: 25,
+                        top: 25,
+                        bottom: 0
+                    }
+                },
+                scales: {
+                    xAxes: [{
+                        time: {
+                            unit: 'date'
+                        },
+                        gridLines: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            maxTicksLimit: 7
+                        }
+                    }],
+                    yAxes: [{
+                        ticks: {
+                            maxTicksLimit: 5,
+                            padding: 10,
+                        },
+                        gridLines: {
+                            color: "rgb(234, 236, 244)",
+                            zeroLineColor: "rgb(234, 236, 244)",
+                            drawBorder: false,
+                            borderDash: [2],
+                            zeroLineBorderDash: [2]
+                        }
+                    },
+                    {
+                        id: 'y-axis-2',
+                        position: 'right',
+                        ticks: {
+                            min: 0,
+                            max: 100,
+                            maxTicksLimit: 5,
+                            padding: 10,
+                        },
+                        gridLines: {
+                            drawBorder: false,
+                            display: false,
+                        }
+                    }],
+                },
+                legend: {
+                    display: true
+                },
+                tooltips: {
+                    backgroundColor: "rgb(255,255,255)",
+                    bodyFontColor: "#858796",
+                    titleMarginBottom: 10,
+                    titleFontColor: '#6e707e',
+                    titleFontSize: 14,
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    xPadding: 15,
+                    yPadding: 15,
+                    displayColors: false,
+                    intersect: false,
+                    mode: 'index',
+                    caretPadding: 10,
+                }
+            }
+        });
+        
+        {% if model_performance %}
+        // Model Performance Chart
+        var performanceCtx = document.getElementById('modelPerformanceChart').getContext('2d');
+        var performanceChart = new Chart(performanceCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for model in model_performance %}
+                        "{{ model.name }} v{{ model.version }}"{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [
+                    {
+                        label: 'Accuracy',
+                        backgroundColor: 'rgba(78, 115, 223, 0.8)',
+                        data: [
+                            {% for model in model_performance %}
+                                {{ model.accuracy|floatformat:2 }}{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ]
+                    },
+                    {
+                        label: 'Precision',
+                        backgroundColor: 'rgba(28, 200, 138, 0.8)',
+                        data: [
+                            {% for model in model_performance %}
+                                {{ model.precision|floatformat:2 }}{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ]
+                    },
+                    {
+                        label: 'Recall',
+                        backgroundColor: 'rgba(246, 194, 62, 0.8)',
+                        data: [
+                            {% for model in model_performance %}
+                                {{ model.recall|floatformat:2 }}{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ]
+                    },
+                    {
+                        label: 'F1 Score',
+                        backgroundColor: 'rgba(231, 74, 59, 0.8)',
+                        data: [
+                            {% for model in model_performance %}
+                                {{ model.f1_score|floatformat:2 }}{% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                        ]
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            min: 0,
+                            max: 1,
+                            maxTicksLimit: 5
+                        }
+                    }],
+                    xAxes: [{
+                        ticks: {
+                            maxTicksLimit: 10
+                        }
+                    }]
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        });
+        {% endif %}
+        
+        {% if model_stats.by_type %}
+        // Model Type Chart
+        var typeCtx = document.getElementById('modelTypeChart').getContext('2d');
+        var typeChart = new Chart(typeCtx, {
+            type: 'pie',
+            data: {
+                labels: [
+                    {% for type in model_stats.by_type %}
+                        "{{ type.model_type }}"{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    data: [
+                        {% for type in model_stats.by_type %}
+                            {{ type.count }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'],
+                    hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf', '#daa520', '#be3c2e'],
+                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                tooltips: {
+                    backgroundColor: "rgb(255,255,255)",
+                    bodyFontColor: "#858796",
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    xPadding: 15,
+                    yPadding: 15,
+                    displayColors: false,
+                    caretPadding: 10,
+                },
+                legend: {
+                    display: true,
+                    position: 'bottom'
+                },
+                cutoutPercentage: 0,
+            },
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %}

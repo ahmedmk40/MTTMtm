@@ -1,0 +1,3 @@
+"""
+Velocity Engine app initialization.
+"""

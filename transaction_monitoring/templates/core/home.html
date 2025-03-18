@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 text-center mb-5">
+        <h1 class="display-4">Transaction Monitoring and Fraud Detection System</h1>
+        <p class="lead">Secure, real-time fraud detection for all your payment transactions</p>
+    </div>
+</div>
+
+{% if user.is_authenticated %}
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-exchange-alt fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Transactions</h5>
+                    <p class="card-text">View and manage transaction data across all channels.</p>
+                    <a href="/transactions/" class="btn btn-primary">Go to Transactions</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-tachometer-alt fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">Dashboard</h5>
+                    <p class="card-text">Access your role-specific dashboard with key metrics.</p>
+                    <a href="/dashboard/" class="btn btn-success">Go to Dashboard</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-bar fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Reports</h5>
+                    <p class="card-text">Generate and view detailed reports and analytics.</p>
+                    <a href="/reports/" class="btn btn-info">Go to Reports</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Welcome to the Transaction Monitoring System</h3>
+                    <p class="card-text">Please log in to access the system features.</p>
+                    <a href="/accounts/login/" class="btn btn-primary btn-lg">Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<div class="row mt-5">
+    <div class="col-md-12">
+        <h2 class="text-center mb-4">Key Features</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-bolt text-warning me-2"></i>Real-time Detection</h5>
+                <p class="card-text">Process transactions in real-time with sub-500ms response times to catch fraud as it happens.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-brain text-danger me-2"></i>Advanced ML Models</h5>
+                <p class="card-text">Leverage machine learning to detect complex fraud patterns and adapt to new threats.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-shield-alt text-primary me-2"></i>Comprehensive Rules</h5>
+                <p class="card-text">Configurable rule engine with velocity checks, amount thresholds, and behavioral analysis.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-money-bill-wave text-success me-2"></i>AML Monitoring</h5>
+                <p class="card-text">Detect money laundering patterns with specialized algorithms for transaction syndication.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-chart-line text-info me-2"></i>Detailed Analytics</h5>
+                <p class="card-text">Comprehensive reporting and visualization tools for fraud trends and patterns.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-user-shield text-secondary me-2"></i>Role-based Access</h5>
+                <p class="card-text">Tailored interfaces for compliance officers, fraud analysts, risk managers, and executives.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

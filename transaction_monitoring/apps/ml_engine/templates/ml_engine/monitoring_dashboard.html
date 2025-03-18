@@ -1,0 +1,424 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ML Monitoring Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">ML Monitoring Dashboard</h1>
+        <div>
+            <a href="{% url 'ml_engine:model_drift' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                <i class="fas fa-chart-line fa-sm text-white-50"></i> Model Drift Analysis
+            </a>
+            <a href="{% url 'ml_engine:feature_distribution' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                <i class="fas fa-chart-bar fa-sm text-white-50"></i> Feature Distribution
+            </a>
+            <a href="{% url 'ml_engine:abtest_list' %}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                <i class="fas fa-flask fa-sm text-white-50"></i> A/B Tests
+            </a>
+        </div>
+    </div>
+
+    <!-- Alerts Row -->
+    {% if drift_alerts %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-left-warning shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">Model Drift Alerts</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Baseline Risk Score</th>
+                                    <th>Current Risk Score</th>
+                                    <th>Absolute Drift</th>
+                                    <th>Relative Drift</th>
+                                    <th>Z-Score</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alert in drift_alerts %}
+                                <tr>
+                                    <td>{{ alert.model_name }} v{{ alert.model_version }}</td>
+                                    <td>{{ alert.drift_metrics.baseline_avg_risk|floatformat:2 }}</td>
+                                    <td>{{ alert.drift_metrics.current_avg_risk|floatformat:2 }}</td>
+                                    <td>{{ alert.drift_metrics.absolute_drift|floatformat:2 }}</td>
+                                    <td>{{ alert.drift_metrics.relative_drift|floatformat:2 }}</td>
+                                    <td>{{ alert.drift_metrics.z_score|floatformat:2 }}</td>
+                                    <td>
+                                        <a href="{% url 'ml_engine:model_drift' %}?model_id={{ alert.model_id }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-search"></i> Analyze
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Performance Overview Row -->
+    <div class="row">
+        <!-- Total Predictions Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Predictions (30 days)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ metrics.total_predictions }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calculator fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Average Risk Score Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Average Risk Score</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ metrics.avg_risk_score|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Average Execution Time Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Avg Execution Time (ms)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ metrics.avg_execution_time|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Distribution Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Risk Distribution</div>
+                            <div class="row no-gutters align-items-center">
+                                <div class="col-auto">
+                                    <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                                        {{ metrics.high_risk_count }} High
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="progress progress-sm mr-2">
+                                        <div class="progress-bar bg-danger" role="progressbar" 
+                                            style="width: {% widthratio metrics.high_risk_count metrics.total_predictions 100 %}%"></div>
+                                        <div class="progress-bar bg-warning" role="progressbar" 
+                                            style="width: {% widthratio metrics.medium_risk_count metrics.total_predictions 100 %}%"></div>
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                            style="width: {% widthratio metrics.low_risk_count metrics.total_predictions 100 %}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <!-- Daily Predictions Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Daily Predictions & Risk Scores</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="dailyPredictionsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Distribution Chart -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Risk Score Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="riskDistributionChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-center small">
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-success"></i> Low Risk (0-50)
+                        </span>
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-warning"></i> Medium Risk (50-80)
+                        </span>
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-danger"></i> High Risk (80-100)
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Performance Row -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Model Performance</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Type</th>
+                                    <th>Predictions</th>
+                                    <th>Avg Risk Score</th>
+                                    <th>Avg Execution Time (ms)</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for model_metric in metrics.model_metrics %}
+                                <tr>
+                                    <td>{{ model_metric.name }} v{{ model_metric.version }}</td>
+                                    <td>{{ model_metric.type }}</td>
+                                    <td>{{ model_metric.prediction_count }}</td>
+                                    <td>{{ model_metric.avg_risk_score|floatformat:2 }}</td>
+                                    <td>{{ model_metric.avg_execution_time|floatformat:2 }}</td>
+                                    <td>
+                                        <a href="{% url 'ml_engine:model_detail' model_id=model_metric.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-search"></i> Details
+                                        </a>
+                                        <a href="{% url 'ml_engine:model_drift' %}?model_id={{ model_metric.id }}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-chart-line"></i> Drift
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- A/B Tests Row -->
+    {% if ab_tests %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Active A/B Tests</h6>
+                    <a href="{% url 'ml_engine:abtest_create' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus"></i> New A/B Test
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Test Name</th>
+                                    <th>Control Model</th>
+                                    <th>Variant Model</th>
+                                    <th>Traffic Split</th>
+                                    <th>Duration</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for test in ab_tests %}
+                                <tr>
+                                    <td>{{ test.test_name }}</td>
+                                    <td>{{ test.control.name }} v{{ test.control.version }}</td>
+                                    <td>{{ test.variant.name }} v{{ test.variant.version }}</td>
+                                    <td>{{ test.traffic_split|floatformat:2 }}</td>
+                                    <td>{{ test.duration_days }} days</td>
+                                    <td>
+                                        {% if test.status == 'active' %}
+                                        <span class="badge badge-success">Active</span>
+                                        {% else %}
+                                        <span class="badge badge-secondary">Completed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'ml_engine:abtest_detail' test_id=test.test_id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-search"></i> Details
+                                        </a>
+                                        {% if test.status == 'active' %}
+                                        <a href="{% url 'ml_engine:abtest_end' test_id=test.test_id %}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-stop"></i> End Test
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Daily Predictions Chart
+    var dailyCtx = document.getElementById('dailyPredictionsChart').getContext('2d');
+    var dailyPredictionsChart = new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for metric in metrics.daily_metrics %}
+                "{{ metric.day|date:'M d' }}",
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Predictions',
+                data: [
+                    {% for metric in metrics.daily_metrics %}
+                    {{ metric.count }},
+                    {% endfor %}
+                ],
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                borderColor: 'rgba(78, 115, 223, 1)',
+                pointRadius: 3,
+                pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                pointBorderColor: 'rgba(78, 115, 223, 1)',
+                pointHoverRadius: 5,
+                pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
+                pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
+                pointHitRadius: 10,
+                pointBorderWidth: 2,
+                yAxisID: 'y',
+            }, {
+                label: 'Avg Risk Score',
+                data: [
+                    {% for metric in metrics.daily_metrics %}
+                    {{ metric.avg_risk_score|floatformat:2 }},
+                    {% endfor %}
+                ],
+                backgroundColor: 'rgba(246, 194, 62, 0.05)',
+                borderColor: 'rgba(246, 194, 62, 1)',
+                pointRadius: 3,
+                pointBackgroundColor: 'rgba(246, 194, 62, 1)',
+                pointBorderColor: 'rgba(246, 194, 62, 1)',
+                pointHoverRadius: 5,
+                pointHoverBackgroundColor: 'rgba(246, 194, 62, 1)',
+                pointHoverBorderColor: 'rgba(246, 194, 62, 1)',
+                pointHitRadius: 10,
+                pointBorderWidth: 2,
+                yAxisID: 'y1',
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Prediction Count'
+                    }
+                },
+                y1: {
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Risk Score'
+                    },
+                    min: 0,
+                    max: 100,
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Risk Distribution Chart
+    var riskCtx = document.getElementById('riskDistributionChart').getContext('2d');
+    var riskDistributionChart = new Chart(riskCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+            datasets: [{
+                data: [
+                    {{ metrics.low_risk_count }},
+                    {{ metrics.medium_risk_count }},
+                    {{ metrics.high_risk_count }}
+                ],
+                backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b'],
+                hoverBackgroundColor: ['#17a673', '#dda20a', '#be2617'],
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            var label = context.label || '';
+                            var value = context.raw || 0;
+                            var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            var percentage = Math.round((value / total) * 100);
+                            return label + ': ' + value + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

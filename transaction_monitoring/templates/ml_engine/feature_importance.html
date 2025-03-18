@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Feature Importance - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:analytics' %}">Analytics</a></li>
+                    <li class="breadcrumb-item active">Feature Importance</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Feature Importance Analysis</h1>
+        </div>
+    </div>
+    
+    <!-- Model Selection -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Select Model</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="form-inline">
+                        <div class="form-group mb-2 mr-3">
+                            <label for="model_id" class="mr-2">Model:</label>
+                            <select name="model_id" id="model_id" class="form-control">
+                                <option value="">Select a Model</option>
+                                {% for model in active_models %}
+                                <option value="{{ model.id }}" {% if selected_model.id == model.id %}selected{% endif %}>{{ model.name }} v{{ model.version }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary mb-2">View Feature Importance</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Feature Importance Chart -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        {% if selected_model %}
+                            Feature Importance for {{ selected_model.name }} v{{ selected_model.version }}
+                        {% else %}
+                            Feature Importance
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if selected_model and feature_importance %}
+                        <div class="chart-bar">
+                            <canvas id="featureImportanceChart"></canvas>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            {% if selected_model %}
+                                No feature importance data available for this model.
+                            {% else %}
+                                Please select a model to view feature importance.
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Feature Importance Table -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Feature Importance Details</h6>
+                </div>
+                <div class="card-body">
+                    {% if selected_model and feature_importance %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Feature</th>
+                                        <th>Importance</th>
+                                        <th>Relative Importance (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feature, importance in feature_importance %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ feature }}</td>
+                                        <td>{{ importance|floatformat:4 }}</td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ importance|floatformat:4 }}%" aria-valuenow="{{ importance|floatformat:4 }}" aria-valuemin="0" aria-valuemax="100">{{ importance|floatformat:2 }}%</div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            {% if selected_model %}
+                                No feature importance data available for this model.
+                            {% else %}
+                                Please select a model to view feature importance details.
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Feature Descriptions -->
+    {% if selected_model and feature_importance %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Feature Descriptions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle mr-2"></i> This section would typically contain descriptions of each feature and how they contribute to the model's predictions.
+                    </div>
+                    <p>
+                        Feature importance helps identify which features have the most influence on the model's predictions. 
+                        Higher importance values indicate that the feature has a stronger effect on the prediction outcome.
+                    </p>
+                    <p>
+                        For this model, the top features are:
+                    </p>
+                    <ul>
+                        {% for feature, importance in feature_importance|slice:":5" %}
+                        <li><strong>{{ feature }}</strong>: This feature has an importance score of {{ importance|floatformat:4 }}.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if selected_model and feature_importance %}
+        // Feature Importance Chart
+        var featureCtx = document.getElementById('featureImportanceChart').getContext('2d');
+        var featureChart = new Chart(featureCtx, {
+            type: 'horizontalBar',
+            data: {
+                labels: [
+                    {% for feature, importance in feature_importance %}
+                        "{{ feature }}"{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Feature Importance',
+                    data: [
+                        {% for feature, importance in feature_importance %}
+                            {{ importance }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(78, 115, 223, 0.8)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    xAxes: [{
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                },
+                legend: {
+                    display: false
+                }
+            }
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %}

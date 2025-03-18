@@ -1,0 +1,423 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Test Rules - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:list' %}">Rules</a></li>
+                    {% if rule %}
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:detail' rule.id %}">{{ rule.name }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">Test Rules</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Rule Testing Sandbox</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rule Condition</h5>
+                </div>
+                <div class="card-body">
+                    <form id="testForm">
+                        {% csrf_token %}
+                        
+                        {% if rule %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> You are testing the rule: <strong>{{ rule.name }}</strong>
+                        </div>
+                        <input type="hidden" id="ruleId" value="{{ rule.id }}">
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="condition" class="form-label">Condition</label>
+                            <div class="d-flex justify-content-end mb-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#conditionHelpModal">
+                                    <i class="fas fa-question-circle me-1"></i> Help
+                                </button>
+                            </div>
+                            <textarea class="form-control font-monospace" id="condition" name="condition" rows="8" required>{% if rule %}{{ rule.condition }}{% endif %}</textarea>
+                            <div class="form-text">
+                                Python expression that evaluates to True or False. Use <code>transaction</code> to access transaction data.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="transactionType" class="form-label">Transaction Type</label>
+                            <select class="form-select" id="transactionType" name="transactionType">
+                                <option value="pos">POS Transaction</option>
+                                <option value="ecommerce">E-commerce Transaction</option>
+                                <option value="wallet">Wallet Transaction</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="button" id="testButton" class="btn btn-primary">
+                                <i class="fas fa-flask me-2"></i> Test Rule
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Test Results</h5>
+                </div>
+                <div class="card-body">
+                    <div id="testResults" class="d-none">
+                        <div class="alert d-none" id="testAlert" role="alert"></div>
+                        
+                        <div class="mb-4 d-none" id="testDetails">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Result</h6>
+                                            <p class="card-text" id="testResult"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Execution Time</h6>
+                                            <p class="card-text" id="testExecutionTime"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h6 class="mt-4">Condition Values</h6>
+                            <pre class="p-3 bg-light rounded"><code id="testConditionValues"></code></pre>
+                        </div>
+                    </div>
+                    
+                    <div id="testPlaceholder" class="text-center py-5">
+                        <i class="fas fa-flask fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">Enter a rule condition and click "Test Rule" to evaluate it against sample transaction data.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-5">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Sample Transaction Data</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="transactionTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="pos-tab" data-bs-toggle="tab" data-bs-target="#pos" type="button" role="tab" aria-controls="pos" aria-selected="true">POS</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="ecommerce-tab" data-bs-toggle="tab" data-bs-target="#ecommerce" type="button" role="tab" aria-controls="ecommerce" aria-selected="false">E-commerce</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="wallet-tab" data-bs-toggle="tab" data-bs-target="#wallet" type="button" role="tab" aria-controls="wallet" aria-selected="false">Wallet</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content pt-3" id="transactionTabsContent">
+                        <div class="tab-pane fade show active" id="pos" role="tabpanel" aria-labelledby="pos-tab">
+                            <pre class="p-3 bg-light rounded" style="max-height: 500px; overflow-y: auto;"><code>{{ sample_transactions.pos|pprint }}</code></pre>
+                        </div>
+                        <div class="tab-pane fade" id="ecommerce" role="tabpanel" aria-labelledby="ecommerce-tab">
+                            <pre class="p-3 bg-light rounded" style="max-height: 500px; overflow-y: auto;"><code>{{ sample_transactions.ecommerce|pprint }}</code></pre>
+                        </div>
+                        <div class="tab-pane fade" id="wallet" role="tabpanel" aria-labelledby="wallet-tab">
+                            <pre class="p-3 bg-light rounded" style="max-height: 500px; overflow-y: auto;"><code>{{ sample_transactions.wallet|pprint }}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Example Rules</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="exampleRulesAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingAmount">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAmount" aria-expanded="false" aria-controls="collapseAmount">
+                                    Amount Rules
+                                </button>
+                            </h2>
+                            <div id="collapseAmount" class="accordion-collapse collapse" aria-labelledby="headingAmount" data-bs-parent="#exampleRulesAccordion">
+                                <div class="accordion-body">
+                                    <div class="list-group">
+                                        {% for rule in example_rules.amount %}
+                                        <button type="button" class="list-group-item list-group-item-action example-rule" 
+                                                data-condition="{{ rule.condition }}">
+                                            {{ rule.name }}
+                                            <small class="d-block text-muted">{{ rule.description }}</small>
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingGeographic">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGeographic" aria-expanded="false" aria-controls="collapseGeographic">
+                                    Geographic Rules
+                                </button>
+                            </h2>
+                            <div id="collapseGeographic" class="accordion-collapse collapse" aria-labelledby="headingGeographic" data-bs-parent="#exampleRulesAccordion">
+                                <div class="accordion-body">
+                                    <div class="list-group">
+                                        {% for rule in example_rules.geographic %}
+                                        <button type="button" class="list-group-item list-group-item-action example-rule" 
+                                                data-condition="{{ rule.condition }}">
+                                            {{ rule.name }}
+                                            <small class="d-block text-muted">{{ rule.description }}</small>
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingCard">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCard" aria-expanded="false" aria-controls="collapseCard">
+                                    Card Rules
+                                </button>
+                            </h2>
+                            <div id="collapseCard" class="accordion-collapse collapse" aria-labelledby="headingCard" data-bs-parent="#exampleRulesAccordion">
+                                <div class="accordion-body">
+                                    <div class="list-group">
+                                        {% for rule in example_rules.card %}
+                                        <button type="button" class="list-group-item list-group-item-action example-rule" 
+                                                data-condition="{{ rule.condition }}">
+                                            {{ rule.name }}
+                                            <small class="d-block text-muted">{{ rule.description }}</small>
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingAML">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAML" aria-expanded="false" aria-controls="collapseAML">
+                                    AML Rules
+                                </button>
+                            </h2>
+                            <div id="collapseAML" class="accordion-collapse collapse" aria-labelledby="headingAML" data-bs-parent="#exampleRulesAccordion">
+                                <div class="accordion-body">
+                                    <div class="list-group">
+                                        {% for rule in example_rules.aml %}
+                                        <button type="button" class="list-group-item list-group-item-action example-rule" 
+                                                data-condition="{{ rule.condition }}">
+                                            {{ rule.name }}
+                                            <small class="d-block text-muted">{{ rule.description }}</small>
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Condition Help Modal -->
+<div class="modal fade" id="conditionHelpModal" tabindex="-1" aria-labelledby="conditionHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="conditionHelpModalLabel">Rule Condition Help</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Condition Syntax</h6>
+                <p>Rule conditions are Python expressions that evaluate to True or False. You can access transaction data using the <code>transaction</code> object.</p>
+                
+                <h6>Common Transaction Fields</h6>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Description</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>transaction["amount"]</code></td>
+                            <td>Transaction amount</td>
+                            <td><code>transaction["amount"] > 1000</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>transaction["currency"]</code></td>
+                            <td>Transaction currency</td>
+                            <td><code>transaction["currency"] == "USD"</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>transaction["channel"]</code></td>
+                            <td>Transaction channel</td>
+                            <td><code>transaction["channel"] == "pos"</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>transaction["user_id"]</code></td>
+                            <td>User ID</td>
+                            <td><code>transaction["user_id"] == "user_123"</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>transaction.get("location_data", {})</code></td>
+                            <td>Location data (nested)</td>
+                            <td><code>transaction.get("location_data", {}).get("country") == "US"</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h6>Example Conditions</h6>
+                <ul>
+                    <li><code>transaction["amount"] > 5000</code> - Amount greater than 5000</li>
+                    <li><code>transaction["amount"] > 1000 and transaction["currency"] == "USD"</code> - Amount greater than 1000 USD</li>
+                    <li><code>transaction.get("location_data", {}).get("country") in ["AF", "KP", "IR"]</code> - Transaction from high-risk country</li>
+                    <li><code>transaction["amount"] % 1000 == 0 and transaction["amount"] >= 1000</code> - Round amount transaction</li>
+                </ul>
+                
+                <h6>Available Functions</h6>
+                <p>You can use the following functions in your conditions:</p>
+                <ul>
+                    <li><code>abs()</code>, <code>min()</code>, <code>max()</code>, <code>sum()</code>, <code>len()</code></li>
+                    <li><code>str()</code>, <code>int()</code>, <code>float()</code>, <code>bool()</code></li>
+                    <li><code>list()</code>, <code>dict()</code>, <code>round()</code></li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Example rule selection
+        const exampleRules = document.querySelectorAll('.example-rule');
+        exampleRules.forEach(rule => {
+            rule.addEventListener('click', function() {
+                document.getElementById('condition').value = this.dataset.condition;
+            });
+        });
+        
+        // Sync transaction type dropdown with tabs
+        const transactionTabs = document.querySelectorAll('#transactionTabs button');
+        const transactionTypeSelect = document.getElementById('transactionType');
+        
+        transactionTabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(event) {
+                const tabId = event.target.getAttribute('id');
+                const transactionType = tabId.replace('-tab', '');
+                transactionTypeSelect.value = transactionType;
+            });
+        });
+        
+        transactionTypeSelect.addEventListener('change', function() {
+            const tabId = this.value + '-tab';
+            const tab = document.getElementById(tabId);
+            bootstrap.Tab.getOrCreateInstance(tab).show();
+        });
+        
+        // Sample transaction data
+        const sampleTransactions = {
+            pos: {{ sample_transactions.pos|safe }},
+            ecommerce: {{ sample_transactions.ecommerce|safe }},
+            wallet: {{ sample_transactions.wallet|safe }}
+        };
+        
+        // Test button functionality
+        const testButton = document.getElementById('testButton');
+        const testResults = document.getElementById('testResults');
+        const testPlaceholder = document.getElementById('testPlaceholder');
+        const testAlert = document.getElementById('testAlert');
+        const testDetails = document.getElementById('testDetails');
+        const testResult = document.getElementById('testResult');
+        const testExecutionTime = document.getElementById('testExecutionTime');
+        const testConditionValues = document.getElementById('testConditionValues');
+        
+        testButton.addEventListener('click', function() {
+            const condition = document.getElementById('condition').value.trim();
+            
+            if (!condition) {
+                testAlert.textContent = 'Please enter a condition to test.';
+                testAlert.classList.remove('d-none', 'alert-success', 'alert-danger');
+                testAlert.classList.add('alert-warning');
+                testResults.classList.remove('d-none');
+                testPlaceholder.classList.add('d-none');
+                testDetails.classList.add('d-none');
+                return;
+            }
+            
+            const transactionType = transactionTypeSelect.value;
+            const testData = sampleTransactions[transactionType];
+            
+            // Send test request
+            fetch('{% url "rule_engine:test" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: new URLSearchParams({
+                    'condition': condition,
+                    'test_data': JSON.stringify(testData)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                testResults.classList.remove('d-none');
+                testPlaceholder.classList.add('d-none');
+                
+                if (data.success) {
+                    testAlert.classList.remove('d-none', 'alert-warning', 'alert-danger');
+                    testAlert.classList.add('alert-success');
+                    testAlert.textContent = data.triggered ? 'Rule condition triggered!' : 'Rule condition not triggered.';
+                    
+                    testDetails.classList.remove('d-none');
+                    testResult.textContent = data.triggered ? 'Triggered' : 'Not Triggered';
+                    testResult.className = data.triggered ? 'text-danger fw-bold' : 'text-success fw-bold';
+                    testExecutionTime.textContent = `${data.execution_time.toFixed(2)} ms`;
+                    testConditionValues.textContent = JSON.stringify(data.condition_values, null, 2);
+                } else {
+                    testAlert.classList.remove('d-none', 'alert-warning', 'alert-success');
+                    testAlert.classList.add('alert-danger');
+                    testAlert.textContent = data.message;
+                    testDetails.classList.add('d-none');
+                }
+            })
+            .catch(error => {
+                testResults.classList.remove('d-none');
+                testPlaceholder.classList.add('d-none');
+                testDetails.classList.add('d-none');
+                
+                testAlert.classList.remove('d-none', 'alert-warning', 'alert-success');
+                testAlert.classList.add('alert-danger');
+                testAlert.textContent = 'Error testing rule: ' + error.message;
+            });
+        });
+    });
+</script>
+{% endblock %}

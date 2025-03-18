@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rule Sets - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">Rule Sets</h1>
+                <a href="{% url 'rule_engine:ruleset_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle me-2"></i> New Rule Set
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Rule Sets</h5>
+                    <h2 class="display-4">{{ ruleset_stats.total }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Active</h5>
+                    <h2 class="display-4">{{ ruleset_stats.active }}</h2>
+                    <p class="text-muted">{{ ruleset_stats.active|floatformat:1 }}% of total</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Avg. Rules per Set</h5>
+                    <h2 class="display-4">{{ ruleset_stats.avg_rules|floatformat:1 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rule Sets</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Rules</th>
+                                    <th>Status</th>
+                                    <th>Created By</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ruleset in rulesets %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'rule_engine:ruleset_detail' ruleset.id %}">{{ ruleset.name }}</a>
+                                    </td>
+                                    <td>{{ ruleset.description|truncatechars:50 }}</td>
+                                    <td>{{ ruleset.rules.count }}</td>
+                                    <td>
+                                        {% if ruleset.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ ruleset.created_by }}</td>
+                                    <td>{{ ruleset.created_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'rule_engine:ruleset_detail' ruleset.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'rule_engine:ruleset_edit' ruleset.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form method="post" action="{% url 'rule_engine:ruleset_toggle' ruleset.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-{% if ruleset.is_active %}warning{% else %}success{% endif %}" title="{% if ruleset.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                    <i class="fas fa-{% if ruleset.is_active %}pause{% else %}play{% endif %}"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <p class="mb-0">No rule sets found.</p>
+                                        <a href="{% url 'rule_engine:ruleset_create' %}" class="btn btn-sm btn-primary mt-2">Create Your First Rule Set</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

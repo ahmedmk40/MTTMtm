@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rule Set: {{ ruleset.name }} - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:ruleset_list' %}">Rule Sets</a></li>
+                    <li class="breadcrumb-item active">{{ ruleset.name }}</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">{{ ruleset.name }}</h1>
+                <div>
+                    <a href="{% url 'rule_engine:ruleset_edit' ruleset.id %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i> Edit
+                    </a>
+                    <form method="post" action="{% url 'rule_engine:ruleset_toggle' ruleset.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-{% if ruleset.is_active %}warning{% else %}success{% endif %}">
+                            <i class="fas fa-{% if ruleset.is_active %}pause{% else %}play{% endif %} me-2"></i> 
+                            {% if ruleset.is_active %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rule Set Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Description:</div>
+                        <div class="col-md-9">{{ ruleset.description }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Status:</div>
+                        <div class="col-md-9">
+                            {% if ruleset.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Created By:</div>
+                        <div class="col-md-9">{{ ruleset.created_by }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Created At:</div>
+                        <div class="col-md-9">{{ ruleset.created_at }}</div>
+                    </div>
+                    {% if ruleset.last_modified_by %}
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Last Modified By:</div>
+                        <div class="col-md-9">{{ ruleset.last_modified_by }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Last Modified At:</div>
+                        <div class="col-md-9">{{ ruleset.updated_at }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rule Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6 text-center">
+                            <h5>Total Rules</h5>
+                            <h2 class="display-5">{{ rule_stats.total }}</h2>
+                        </div>
+                        <div class="col-6 text-center">
+                            <h5>Active Rules</h5>
+                            <h2 class="display-5">{{ rule_stats.active }}</h2>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="mb-3">Rules by Type</h6>
+                    <div class="list-group">
+                        {% for type_stat in rule_stats.by_type %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ type_stat.rule_type }}
+                            <span class="badge bg-primary rounded-pill">{{ type_stat.count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="mb-3">Rules by Action</h6>
+                    <div class="list-group">
+                        {% for action_stat in rule_stats.by_action %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ action_stat.action }}
+                            <span class="badge bg-primary rounded-pill">{{ action_stat.count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Rules in this Set</h5>
+                    <a href="{% url 'rule_engine:ruleset_edit' ruleset.id %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-edit me-1"></i> Edit Rules
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Action</th>
+                                    <th>Priority</th>
+                                    <th>Risk Score</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rule in rules %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'rule_engine:detail' rule.id %}">{{ rule.name }}</a>
+                                    </td>
+                                    <td>{{ rule.get_rule_type_display }}</td>
+                                    <td>
+                                        {% if rule.action == 'approve' %}
+                                        <span class="badge bg-success">Approve</span>
+                                        {% elif rule.action == 'reject' %}
+                                        <span class="badge bg-danger">Reject</span>
+                                        {% elif rule.action == 'review' %}
+                                        <span class="badge bg-warning">Flag for Review</span>
+                                        {% else %}
+                                        <span class="badge bg-info">Notify Only</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ rule.priority }}</td>
+                                    <td>{{ rule.risk_score }}</td>
+                                    <td>
+                                        {% if rule.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'rule_engine:detail' rule.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'rule_engine:test_rule' rule.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-flask"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <p class="mb-0">No rules in this set.</p>
+                                        <a href="{% url 'rule_engine:ruleset_edit' ruleset.id %}" class="btn btn-sm btn-primary mt-2">Add Rules</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

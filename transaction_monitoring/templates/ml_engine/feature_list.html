@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Features - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'ml_engine:dashboard' %}">ML Engine</a></li>
+                    <li class="breadcrumb-item active">Features</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2 mb-0">Feature Definitions</h1>
+                <a href="{% url 'ml_engine:feature_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus mr-2"></i> Create New Feature
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="form-inline">
+                        <div class="form-group mb-2 mr-3">
+                            <label for="is_active" class="mr-2">Status:</label>
+                            <select name="is_active" id="is_active" class="form-control">
+                                <option value="">All</option>
+                                <option value="true" {% if filter_is_active == 'true' %}selected{% endif %}>Active</option>
+                                <option value="false" {% if filter_is_active == 'false' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary mb-2">Apply Filters</button>
+                        <a href="{% url 'ml_engine:feature_list' %}" class="btn btn-secondary mb-2 ml-2">Clear Filters</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Features Table -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Features</h6>
+                </div>
+                <div class="card-body">
+                    {% if features %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Data Type</th>
+                                        <th>Source</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feature in features %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'ml_engine:feature_detail' feature.id %}">
+                                                {{ feature.name }}
+                                            </a>
+                                        </td>
+                                        <td>{{ feature.data_type }}</td>
+                                        <td>{{ feature.source }}</td>
+                                        <td>
+                                            {% if feature.is_active %}
+                                            <span class="badge badge-success">Active</span>
+                                            {% else %}
+                                            <span class="badge badge-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'ml_engine:feature_detail' feature.id %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'ml_engine:feature_edit' feature.id %}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'ml_engine:feature_delete' feature.id %}" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No features found. <a href="{% url 'ml_engine:feature_create' %}">Create a feature</a> to get started.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

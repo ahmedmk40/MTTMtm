@@ -1,0 +1,39 @@
+{% load notification_tags %}
+
+{% if messages %}
+<div class="messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message|message_bootstrap_class }} {% if message.dismissible|default:True %}alert-dismissible{% endif %} fade show" role="alert"
+         {% if message.timeout %}data-bs-delay="{{ message.timeout }}" data-bs-autohide="true"{% endif %}>
+        <i class="fas {{ message|message_icon_class }} me-2"></i>
+        {{ message }}
+        {% if message.dismissible|default:True %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+{% if messages|length > 0 %}
+<script>
+    // Auto-dismiss messages with timeout
+    document.addEventListener('DOMContentLoaded', function() {
+        const autoHideAlerts = document.querySelectorAll('.alert[data-bs-autohide="true"]');
+        autoHideAlerts.forEach(function(alert) {
+            const delay = parseInt(alert.getAttribute('data-bs-delay')) || 5000;
+            setTimeout(function() {
+                const closeButton = alert.querySelector('.btn-close');
+                if (closeButton) {
+                    closeButton.click();
+                } else {
+                    alert.classList.remove('show');
+                    setTimeout(function() {
+                        alert.remove();
+                    }, 150);
+                }
+            }, delay);
+        });
+    });
+</script>
+{% endif %}
+{% endif %}

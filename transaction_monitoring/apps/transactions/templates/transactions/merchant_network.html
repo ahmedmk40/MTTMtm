@@ -1,0 +1,590 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Merchant Network: {{ merchant_id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    #network-container {
+        width: 100%;
+        height: 500px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f8f9fc;
+    }
+    
+    .network-legend {
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #fff;
+    }
+    
+    .legend-item {
+        display: inline-block;
+        margin-right: 20px;
+    }
+    
+    .legend-color {
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        margin-right: 5px;
+        border-radius: 50%;
+        vertical-align: middle;
+    }
+    
+    .user-color { background-color: #4e73df; }
+    .merchant-color { background-color: #1cc88a; }
+    .high-risk-color { background-color: #e74a3b; }
+    .medium-risk-color { background-color: #f6c23e; }
+    .low-risk-color { background-color: #36b9cc; }
+    .edge-normal-color { background-color: #aaa; }
+    .edge-flagged-color { background-color: #e74a3b; }
+    
+    .network-controls {
+        margin-bottom: 15px;
+    }
+    
+    .network-stats {
+        margin-top: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Merchant Network: {{ merchant_id }}</h1>
+        <div>
+            <a href="{% url 'transactions:network_dashboard' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+                <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to Network
+            </a>
+        </div>
+    </div>
+
+    <!-- Network Controls -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Network Controls</h6>
+        </div>
+        <div class="card-body">
+            <form id="network-filter-form" class="form-inline">
+                <div class="form-group mb-2 mr-2">
+                    <label for="days" class="mr-2">Time Period:</label>
+                    <select name="days" id="days" class="form-control">
+                        <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                        <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                        <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary mb-2">Apply Filters</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Network Visualization -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Merchant Transaction Network</h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                            aria-labelledby="dropdownMenuLink">
+                            <div class="dropdown-header">Network Options:</div>
+                            <a class="dropdown-item" href="#" id="zoom-to-fit">Zoom to Fit</a>
+                            <a class="dropdown-item" href="#" id="toggle-physics">Toggle Physics</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" id="download-image">Download Image</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="network-container"></div>
+                    
+                    <div class="network-legend mt-3">
+                        <div class="legend-item">
+                            <span class="legend-color user-color"></span> User
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color merchant-color"></span> Merchant
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color high-risk-color"></span> High Risk
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color medium-risk-color"></span> Medium Risk
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color low-risk-color"></span> Low Risk
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color edge-normal-color"></span> Normal Transaction
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color edge-flagged-color"></span> Flagged Transaction
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Network Stats -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Merchant Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div id="network-stats">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <p>Loading merchant statistics...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Merchant Transactions -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Merchant Transactions</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>User</th>
+                            <th>Channel</th>
+                            <th>Status</th>
+                            <th>Risk Score</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in page_obj %}
+                        <tr>
+                            <td>{{ transaction.transaction_id }}</td>
+                            <td>{{ transaction.timestamp }}</td>
+                            <td>{{ transaction.amount }} {{ transaction.currency }}</td>
+                            <td>{{ transaction.user_id }}</td>
+                            <td>{{ transaction.get_channel_display }}</td>
+                            <td>
+                                {% if transaction.status == 'approved' %}
+                                <span class="badge badge-success">Approved</span>
+                                {% elif transaction.status == 'rejected' %}
+                                <span class="badge badge-danger">Rejected</span>
+                                {% elif transaction.status == 'flagged' %}
+                                <span class="badge badge-warning">Flagged</span>
+                                {% else %}
+                                <span class="badge badge-secondary">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if transaction.risk_score %}
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar 
+                                        {% if transaction.risk_score >= 80 %}bg-danger
+                                        {% elif transaction.risk_score >= 50 %}bg-warning
+                                        {% else %}bg-success{% endif %}" 
+                                        role="progressbar" 
+                                        style="width: {{ transaction.risk_score }}%;" 
+                                        aria-valuenow="{{ transaction.risk_score }}" 
+                                        aria-valuemin="0" 
+                                        aria-valuemax="100">
+                                        {{ transaction.risk_score }}
+                                    </div>
+                                </div>
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'transactions:detail' transaction_id=transaction.transaction_id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-search"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">No transactions found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="d-flex justify-content-center mt-3">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1" aria-label="First">
+                                <span aria-hidden="true">&laquo;&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Vis.js Network Visualization Library -->
+<script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.2/dist/vis-network.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script>
+    // Network visualization
+    let network = null;
+    let networkData = null;
+    let physicsEnabled = true;
+    
+    // Load network data
+    function loadNetworkData() {
+        const days = document.getElementById('days').value;
+        
+        // Show loading spinner
+        document.getElementById('network-container').innerHTML = `
+            <div class="text-center" style="padding-top: 200px;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading network data...</p>
+            </div>
+        `;
+        
+        // Fetch network data
+        fetch(`{% url 'transactions:merchant_network_data' merchant_id=merchant_id %}?days=${days}`)
+            .then(response => response.json())
+            .then(data => {
+                networkData = data;
+                renderNetwork(data);
+                updateNetworkStats(data.stats);
+            })
+            .catch(error => {
+                console.error('Error loading network data:', error);
+                document.getElementById('network-container').innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error loading network data:</strong> ${error.message}
+                    </div>
+                `;
+            });
+    }
+    
+    // Render network visualization
+    function renderNetwork(data) {
+        const container = document.getElementById('network-container');
+        
+        // Create nodes with different colors based on type and risk level
+        const nodes = data.nodes.map(node => {
+            let color = '#4e73df';  // Default blue for users
+            
+            if (node.type === 'merchant') {
+                color = '#1cc88a';  // Green for merchants
+            }
+            
+            // Override color based on risk level
+            if (node.risk_level === 'high') {
+                color = '#e74a3b';  // Red for high risk
+            } else if (node.risk_level === 'medium') {
+                color = '#f6c23e';  // Yellow for medium risk
+            } else if (node.risk_level === 'low' && node.type === 'user') {
+                color = '#36b9cc';  // Light blue for low risk users
+            }
+            
+            return {
+                id: node.id,
+                label: node.label,
+                title: `${node.label}<br>Transactions: ${node.transactions}<br>Amount: $${node.amount.toFixed(2)}<br>Risk Level: ${node.risk_level}`,
+                color: {
+                    background: color,
+                    border: '#2e59d9',
+                    highlight: {
+                        background: color,
+                        border: '#17a673'
+                    }
+                },
+                font: {
+                    color: '#fff'
+                },
+                size: node.size,
+                value: node.transactions
+            };
+        });
+        
+        // Create edges
+        const edges = data.edges.map(edge => {
+            return {
+                id: edge.id,
+                from: edge.source,
+                to: edge.target,
+                title: `Transactions: ${edge.transactions}<br>Amount: $${edge.amount.toFixed(2)}<br>Flagged: ${edge.flagged ? 'Yes' : 'No'}`,
+                color: {
+                    color: edge.color,
+                    highlight: '#17a673'
+                },
+                width: edge.size,
+                value: edge.transactions
+            };
+        });
+        
+        // Create network data
+        const visData = {
+            nodes: new vis.DataSet(nodes),
+            edges: new vis.DataSet(edges)
+        };
+        
+        // Network options
+        const options = {
+            nodes: {
+                shape: 'dot',
+                scaling: {
+                    min: 10,
+                    max: 30,
+                    label: {
+                        enabled: true,
+                        min: 14,
+                        max: 24
+                    }
+                },
+                font: {
+                    size: 12,
+                    face: 'Tahoma'
+                }
+            },
+            edges: {
+                width: 1,
+                smooth: {
+                    type: 'continuous'
+                },
+                arrows: {
+                    to: {
+                        enabled: false
+                    }
+                },
+                scaling: {
+                    min: 1,
+                    max: 10
+                }
+            },
+            physics: {
+                stabilization: false,
+                barnesHut: {
+                    gravitationalConstant: -80000,
+                    springConstant: 0.001,
+                    springLength: 200
+                }
+            },
+            interaction: {
+                tooltipDelay: 200,
+                hideEdgesOnDrag: true,
+                multiselect: true
+            }
+        };
+        
+        // Create network
+        network = new vis.Network(container, visData, options);
+        
+        // Network events
+        network.on('click', function(params) {
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                const node = data.nodes.find(n => n.id === nodeId);
+                
+                if (node && node.type === 'user') {
+                    const userId = node.id.replace('user_', '');
+                    window.location.href = `{% url 'transactions:user_network' user_id='PLACEHOLDER' %}`.replace('PLACEHOLDER', userId);
+                }
+            }
+        });
+    }
+    
+    // Update network statistics
+    function updateNetworkStats(stats) {
+        const statsHtml = `
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                        Transactions</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">${stats.total_transactions}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card border-left-info shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Users</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">${stats.total_users}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-users fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <h6 class="font-weight-bold">Risk Distribution</h6>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-danger" role="progressbar" 
+                        style="width: ${stats.high_risk_transactions / Math.max(1, stats.total_transactions) * 100}%" 
+                        aria-valuenow="${stats.high_risk_transactions}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="${stats.total_transactions}">
+                        ${stats.high_risk_transactions}
+                    </div>
+                    <div class="progress-bar bg-warning" role="progressbar" 
+                        style="width: ${stats.medium_risk_transactions / Math.max(1, stats.total_transactions) * 100}%" 
+                        aria-valuenow="${stats.medium_risk_transactions}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="${stats.total_transactions}">
+                        ${stats.medium_risk_transactions}
+                    </div>
+                    <div class="progress-bar bg-success" role="progressbar" 
+                        style="width: ${stats.low_risk_transactions / Math.max(1, stats.total_transactions) * 100}%" 
+                        aria-valuenow="${stats.low_risk_transactions}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="${stats.total_transactions}">
+                        ${stats.low_risk_transactions}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <span class="badge badge-danger">High: ${stats.high_risk_transactions}</span>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <span class="badge badge-warning">Medium: ${stats.medium_risk_transactions}</span>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <span class="badge badge-success">Low: ${stats.low_risk_transactions}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <h6 class="font-weight-bold">Flagged Transactions</h6>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-danger" role="progressbar" 
+                        style="width: ${stats.flagged_transactions / Math.max(1, stats.total_transactions) * 100}%" 
+                        aria-valuenow="${stats.flagged_transactions}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="${stats.total_transactions}">
+                        ${stats.flagged_transactions}
+                    </div>
+                </div>
+                <div class="text-center">
+                    <span class="badge badge-danger">Flagged: ${stats.flagged_transactions}</span>
+                    <span class="badge badge-secondary">Not Flagged: ${stats.total_transactions - stats.flagged_transactions}</span>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('network-stats').innerHTML = statsHtml;
+    }
+    
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load initial network data
+        loadNetworkData();
+        
+        // Filter form submission
+        document.getElementById('network-filter-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            loadNetworkData();
+        });
+        
+        // Network options
+        document.getElementById('zoom-to-fit').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (network) {
+                network.fit();
+            }
+        });
+        
+        document.getElementById('toggle-physics').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (network) {
+                physicsEnabled = !physicsEnabled;
+                network.setOptions({ physics: { enabled: physicsEnabled } });
+            }
+        });
+        
+        document.getElementById('download-image').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (network) {
+                html2canvas(document.getElementById('network-container')).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'merchant-network.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Rule{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Edit Rule</h1>
+        <div>
+            <a href="{% url 'rule_engine:detail' rule_id=rule.id %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm mr-2">
+                <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back to Rule
+            </a>
+            <a href="{% url 'rule_engine:list' %}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+                <i class="fas fa-list fa-sm text-white-50"></i> All Rules
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Rule Details</h6>
+                    <div>
+                        <span class="badge badge-info">Version {{ rule.version }}</span>
+                        {% if rule.is_active %}
+                            <span class="badge badge-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="name">Rule Name</label>
+                                    <input type="text" class="form-control" id="name" name="name" required
+                                           value="{{ form_data.name|default:rule.name }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="rule_type">Rule Type</label>
+                                    <select class="form-control" id="rule_type" name="rule_type" required>
+                                        {% for value, label in rule_types %}
+                                            <option value="{{ value }}" {% if form_data.rule_type == value or rule.rule_type == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" required>{{ form_data.description|default:rule.description }}</textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="condition">Condition</label>
+                            <textarea class="form-control" id="condition" name="condition" rows="5" required>{{ form_data.condition|default:rule.condition }}</textarea>
+                            <small class="form-text text-muted">
+                                Python expression that evaluates to True or False. Use 'transaction' as the variable name.
+                                Example: transaction["amount"] > 1000 and transaction["channel"] == "ecommerce"
+                            </small>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="action">Action</label>
+                                    <select class="form-control" id="action" name="action" required>
+                                        {% for value, label in action_choices %}
+                                            <option value="{{ value }}" {% if form_data.action == value or rule.action == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="risk_score">Risk Score</label>
+                                    <input type="number" class="form-control" id="risk_score" name="risk_score" min="0" max="100" step="0.1" required
+                                           value="{{ form_data.risk_score|default:rule.risk_score }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="priority">Priority</label>
+                                    <input type="number" class="form-control" id="priority" name="priority" min="0" max="100" required
+                                           value="{{ form_data.priority|default:rule.priority }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Channel Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="applies_to_pos" name="applies_to_pos" 
+                                               {% if form_data.applies_to_pos == 'on' or rule.applies_to_pos %}checked{% endif %}>
+                                        <label class="custom-control-label" for="applies_to_pos">Applies to POS</label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="applies_to_ecommerce" name="applies_to_ecommerce" 
+                                               {% if form_data.applies_to_ecommerce == 'on' or rule.applies_to_ecommerce %}checked{% endif %}>
+                                        <label class="custom-control-label" for="applies_to_ecommerce">Applies to E-commerce</label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="applies_to_wallet" name="applies_to_wallet" 
+                                               {% if form_data.applies_to_wallet == 'on' or rule.applies_to_wallet %}checked{% endif %}>
+                                        <label class="custom-control-label" for="applies_to_wallet">Applies to Wallet</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% include 'rule_engine/partials/merchant_specific_fields.html' %}
+                        
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" 
+                                       {% if form_data.is_active == 'on' or rule.is_active %}checked{% endif %}>
+                                <label class="custom-control-label" for="is_active">Active</label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Update Rule</button>
+                        <a href="{% url 'rule_engine:detail' rule_id=rule.id %}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

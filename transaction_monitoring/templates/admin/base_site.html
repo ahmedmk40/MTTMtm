@@ -1,0 +1,112 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static performance_tags %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    :root {
+        --primary: #2c3e50;
+        --secondary: #34495e;
+        --accent: #3498db;
+        --primary-fg: #fff;
+        --body-fg: #333;
+        --body-bg: #fff;
+        --body-quiet-color: #666;
+        --body-loud-color: #000;
+    }
+    
+    #header {
+        background: var(--primary);
+        color: var(--primary-fg);
+    }
+    
+    #branding h1 {
+        color: var(--primary-fg);
+    }
+    
+    .module h2, .module caption, .inline-group h2 {
+        background: var(--secondary);
+    }
+    
+    a:link, a:visited {
+        color: var(--accent);
+    }
+    
+    .button, input[type=submit], input[type=button], .submit-row input, a.button {
+        background: var(--accent);
+    }
+    
+    .button.default, input[type=submit].default, .submit-row input.default {
+        background: var(--primary);
+    }
+    
+    .performance-stats {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+    }
+    
+    .performance-stats h3 {
+        margin-top: 0;
+        color: var(--primary);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+    
+    .stat-card {
+        padding: 10px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: var(--accent);
+    }
+    
+    .stat-label {
+        color: var(--body-quiet-color);
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block usertools %}
+{{ block.super }}
+{% if request.user.is_superuser and debug %}
+<div class="performance-stats">
+    <h3>Performance Metrics</h3>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{% query_count %}</div>
+            <div class="stat-label">Database Queries</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ request.META.X_REQUEST_TIME|default:"N/A" }}</div>
+            <div class="stat-label">Request Time</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ request.session.items|length }}</div>
+            <div class="stat-label">Session Items</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+{% debug_info %}
+{% endblock %}

@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Fraud Engine Dashboard - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="h2 mb-4">Fraud Engine Dashboard</h1>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                TOTAL BLOCKLIST ENTRIES
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_blocks }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-ban fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                ACTIVE BLOCKLIST ENTRIES
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ active_blocks }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-shield-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Blocklist by Entity Type</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for entity_type, count in block_stats.items %}
+                        <div class="col-md-4 mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>{{ entity_type|title }}</span>
+                                <span class="badge badge-primary">{{ count }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Recent Fraud Cases -->
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Fraud Cases</h6>
+                    <a href="{% url 'fraud_engine:cases' %}" class="btn btn-sm btn-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_cases %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Case ID</th>
+                                        <th>Title</th>
+                                        <th>Status</th>
+                                        <th>Priority</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for case in recent_cases %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'fraud_engine:case_detail' case.case_id %}">
+                                                {{ case.case_id }}
+                                            </a>
+                                        </td>
+                                        <td>{{ case.title }}</td>
+                                        <td>
+                                            {% if case.status == 'open' %}
+                                                <span class="badge badge-info">Open</span>
+                                            {% elif case.status == 'investigating' %}
+                                                <span class="badge badge-warning">Investigating</span>
+                                            {% elif case.status == 'resolved' %}
+                                                <span class="badge badge-success">Resolved</span>
+                                            {% elif case.status == 'closed' %}
+                                                <span class="badge badge-secondary">Closed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if case.priority == 'low' %}
+                                                <span class="badge badge-success">Low</span>
+                                            {% elif case.priority == 'medium' %}
+                                                <span class="badge badge-warning">Medium</span>
+                                            {% elif case.priority == 'high' %}
+                                                <span class="badge badge-danger">High</span>
+                                            {% elif case.priority == 'critical' %}
+                                                <span class="badge badge-dark">Critical</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No fraud cases found.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Detection Results -->
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Detection Results</h6>
+                    <a href="{% url 'fraud_engine:results' %}" class="btn btn-sm btn-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_results %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Transaction ID</th>
+                                        <th>Risk Score</th>
+                                        <th>Decision</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for result in recent_results %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'fraud_engine:result_detail' result.transaction_id %}">
+                                                {{ result.transaction_id }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {% if result.risk_score >= 80 %}
+                                                <span class="text-danger">{{ result.risk_score }}</span>
+                                            {% elif result.risk_score >= 50 %}
+                                                <span class="text-warning">{{ result.risk_score }}</span>
+                                            {% else %}
+                                                <span class="text-success">{{ result.risk_score }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if result.decision == 'approve' %}
+                                                <span class="badge badge-success">Approve</span>
+                                            {% elif result.decision == 'reject' %}
+                                                <span class="badge badge-danger">Reject</span>
+                                            {% elif result.decision == 'review' %}
+                                                <span class="badge badge-warning">Review</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ result.created_at|date:"M d, Y" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No detection results found.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'fraud_engine:blocklist' %}" class="btn btn-primary btn-block">
+                                <i class="fas fa-ban mr-2"></i> Manage Blocklist
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'fraud_engine:blocklist_add' %}" class="btn btn-success btn-block">
+                                <i class="fas fa-plus mr-2"></i> Add to Blocklist
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'fraud_engine:cases' %}" class="btn btn-warning btn-block">
+                                <i class="fas fa-folder-open mr-2"></i> View Fraud Cases
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{% url 'fraud_engine:results' %}" class="btn btn-info btn-block">
+                                <i class="fas fa-search mr-2"></i> View Detection Results
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

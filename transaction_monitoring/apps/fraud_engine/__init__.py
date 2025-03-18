@@ -1,0 +1,3 @@
+"""
+Fraud Engine app initialization.
+"""

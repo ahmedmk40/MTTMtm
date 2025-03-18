@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add to Blocklist - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'fraud_engine:dashboard' %}">Fraud Engine</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'fraud_engine:blocklist' %}">Blocklist</a></li>
+                    <li class="breadcrumb-item active">Add Entry</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Add to Blocklist</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Blocklist Entry Information</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-group row">
+                            <div class="col-md-6">
+                                <label for="entity_type">Entity Type <span class="text-danger">*</span></label>
+                                <select class="form-control" id="entity_type" name="entity_type" required>
+                                    <option value="">Select Entity Type</option>
+                                    {% for type_code, type_name in entity_types %}
+                                    <option value="{{ type_code }}">{{ type_name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">Select the type of entity to block.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="entity_value">Entity Value <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="entity_value" name="entity_value" required>
+                                <small class="form-text text-muted">Enter the value to block (e.g., IP address, card number, etc.).</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reason">Reason <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                            <small class="form-text text-muted">Provide a reason for adding this entity to the blocklist.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="expires_at">Expiration Date/Time (Optional)</label>
+                            <input type="datetime-local" class="form-control" id="expires_at" name="expires_at">
+                            <small class="form-text text-muted">If left blank, the blocklist entry will never expire.</small>
+                        </div>
+                        
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-ban mr-2"></i> Add to Blocklist
+                            </button>
+                            <a href="{% url 'fraud_engine:blocklist' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times mr-2"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Important Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h5 class="alert-heading">About Blocklist Entries</h5>
+                        <p>Adding an entity to the blocklist will prevent transactions involving that entity from being processed. Please use this feature with caution.</p>
+                        <hr>
+                        <p class="mb-0">For card numbers, the system will automatically hash the value for security purposes.</p>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h5>Entity Types</h5>
+                            <ul class="list-group">
+                                <li class="list-group-item">
+                                    <strong>User ID</strong> - Block a specific user account
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Card Number</strong> - Block a specific payment card
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Device ID</strong> - Block a specific device
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>IP Address</strong> - Block a specific IP address
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Merchant ID</strong> - Block a specific merchant
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Email</strong> - Block a specific email address
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Best Practices</h5>
+                            <ul class="list-group">
+                                <li class="list-group-item">
+                                    Always provide a clear reason for adding an entity to the blocklist
+                                </li>
+                                <li class="list-group-item">
+                                    Consider setting an expiration date for temporary blocks
+                                </li>
+                                <li class="list-group-item">
+                                    Regularly review the blocklist to ensure it remains current
+                                </li>
+                                <li class="list-group-item">
+                                    For IP addresses, use the standard format (e.g., 192.168.1.1)
+                                </li>
+                                <li class="list-group-item">
+                                    For card numbers, enter the full number (it will be securely hashed)
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

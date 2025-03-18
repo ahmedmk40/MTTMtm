@@ -1,0 +1,219 @@
+{% extends "base_rbac.html" %}
+{% load notification_tags %}
+
+{% block title %}Notifications | Transaction Monitoring System{% endblock %}
+
+{% block page_title %}Notifications{% endblock %}
+
+{% block page_actions %}
+<div class="btn-toolbar mb-2 mb-md-0">
+    <div class="btn-group me-2">
+        <form method="post" action="{% url 'notifications:mark_all_as_read' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-check-double me-1"></i> Mark All as Read
+            </button>
+        </form>
+    </div>
+    <a href="{% url 'notifications:preferences' %}" class="btn btn-sm btn-outline-primary">
+        <i class="fas fa-cog me-1"></i> Preferences
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Filter Notifications</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'notifications:list' %}">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="type" class="form-label">Type</label>
+                                <select name="type" id="type" class="form-select">
+                                    <option value="">All Types</option>
+                                    {% for type_code, type_name in notification_types %}
+                                    <option value="{{ type_code }}" {% if selected_type == type_code %}selected{% endif %}>
+                                        {{ type_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="is_read" class="form-label">Status</label>
+                                <select name="is_read" id="is_read" class="form-select">
+                                    <option value="">All</option>
+                                    <option value="false" {% if selected_is_read == 'false' %}selected{% endif %}>Unread</option>
+                                    <option value="true" {% if selected_is_read == 'true' %}selected{% endif %}>Read</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <select name="priority" id="priority" class="form-select">
+                                    <option value="">All Priorities</option>
+                                    {% for priority_code, priority_name in priority_choices %}
+                                    <option value="{{ priority_code }}" {% if selected_priority == priority_code %}selected{% endif %}>
+                                        {{ priority_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i> Filter
+                        </button>
+                        <a href="{% url 'notifications:list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Notifications</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if page_obj %}
+                <div class="list-group list-group-flush">
+                    {% for notification in page_obj %}
+                    <div class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-light{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <div>
+                                <a href="{% url 'notifications:detail' notification.pk %}" class="notification-link">
+                                    <h5 class="mb-1">
+                                        <i class="fas {{ notification.icon_class }} me-2 text-{{ notification.bootstrap_class }}"></i>
+                                        {{ notification.title }}
+                                        {% if not notification.is_read %}
+                                        <span class="badge bg-primary">New</span>
+                                        {% endif %}
+                                    </h5>
+                                </a>
+                                <p class="mb-1">{{ notification.message|truncatechars:100 }}</p>
+                                <small class="text-muted">
+                                    <span class="badge bg-{{ notification.bootstrap_class }}">{{ notification.get_notification_type_display }}</span>
+                                    <span class="badge bg-secondary">{{ notification.get_priority_display }}</span>
+                                    {% if notification.related_object_type %}
+                                    <span class="badge bg-info">{{ notification.related_object_type }}: {{ notification.related_object_id }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">{{ notification.created_at|date:"M d, Y H:i" }}</small>
+                                <div class="btn-group mt-1">
+                                    {% if not notification.is_read %}
+                                    <form method="post" action="{% url 'notifications:mark_as_read' notification.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" title="Mark as Read">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="post" action="{% url 'notifications:delete' notification.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if page_obj.has_other_pages %}
+                <div class="card-footer">
+                    <nav aria-label="Notification pagination">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if selected_type %}&type={{ selected_type }}{% endif %}{% if selected_is_read %}&is_read={{ selected_is_read }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if selected_is_read %}&is_read={{ selected_is_read }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">Previous</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1">First</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1">Previous</a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for i in page_obj.paginator.page_range %}
+                                {% if page_obj.number == i %}
+                                <li class="page-item active">
+                                    <a class="page-link" href="#">{{ i }}</a>
+                                </li>
+                                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ i }}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if selected_is_read %}&is_read={{ selected_is_read }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">{{ i }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if selected_is_read %}&is_read={{ selected_is_read }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if selected_is_read %}&is_read={{ selected_is_read }}{% endif %}{% if selected_priority %}&priority={{ selected_priority }}{% endif %}">Last</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1">Next</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1">Last</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-bell fa-3x mb-3 text-muted"></i>
+                    <h5>No notifications found</h5>
+                    <p class="text-muted">You don't have any notifications matching your filters.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-submit form when select fields change
+        const filterForm = document.querySelector('form[action="{% url 'notifications:list' %}"]');
+        const selectFields = filterForm.querySelectorAll('select');
+        
+        selectFields.forEach(function(select) {
+            select.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+    });
+</script>
+{% endblock %}

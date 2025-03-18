@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete User - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:user_list' %}">User Management</a></li>
+                    <li class="breadcrumb-item active">Delete User</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Delete User: {{ user_obj.username }}</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Confirm Deletion</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle mr-2"></i> 
+                        <strong>Warning:</strong> You are about to delete this user. This action cannot be undone.
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">User Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Username:</div>
+                                <div class="col-md-8">{{ user_obj.username }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Full Name:</div>
+                                <div class="col-md-8">{{ user_obj.get_full_name|default:"Not provided" }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Email:</div>
+                                <div class="col-md-8">{{ user_obj.email|default:"Not provided" }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Role:</div>
+                                <div class="col-md-8">
+                                    {% if user_obj.role %}
+                                        {{ user_obj.get_role_display }}
+                                    {% else %}
+                                        <span class="text-muted">No role assigned</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Status:</div>
+                                <div class="col-md-8">
+                                    {% if user_obj.is_active %}
+                                        <span class="badge badge-success">Active</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 font-weight-bold">Member Since:</div>
+                                <div class="col-md-8">{{ user_obj.date_joined|date:"F d, Y" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <p>
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <strong>Alternative:</strong> Instead of deleting this user, you can also deactivate them by setting their status to inactive.
+                            <a href="{% url 'accounts:user_deactivate' user_obj.id %}" class="btn btn-sm btn-info ml-2">
+                                <i class="fas fa-user-slash mr-1"></i> Deactivate User
+                            </a>
+                        </p>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash mr-2"></i> Confirm Delete
+                            </button>
+                            <a href="{% url 'accounts:user_list' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times mr-2"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

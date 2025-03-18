@@ -1,0 +1,140 @@
+{% extends "base_rbac.html" %}
+{% load notification_tags %}
+
+{% block title %}{{ notification.title }} | Transaction Monitoring System{% endblock %}
+
+{% block page_title %}Notification Details{% endblock %}
+
+{% block page_actions %}
+<div class="btn-toolbar mb-2 mb-md-0">
+    <div class="btn-group me-2">
+        <a href="{% url 'notifications:list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to List
+        </a>
+    </div>
+    <div class="btn-group">
+        {% if not notification.is_read %}
+        <form method="post" action="{% url 'notifications:mark_as_read' notification.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-check me-1"></i> Mark as Read
+            </button>
+        </form>
+        {% endif %}
+        <form method="post" action="{% url 'notifications:delete' notification.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="fas fa-trash me-1"></i> Delete
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-{{ notification.bootstrap_class }} text-white">
+                <div class="d-flex align-items-center">
+                    <i class="fas {{ notification.icon_class }} fa-2x me-3"></i>
+                    <div>
+                        <h5 class="card-title mb-0">{{ notification.title }}</h5>
+                        <small>{{ notification.get_notification_type_display }} • {{ notification.get_priority_display }}</small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Notification Details</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th style="width: 150px;">Created</th>
+                                <td>{{ notification.created_at|date:"M d, Y H:i:s" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Status</th>
+                                <td>
+                                    {% if notification.is_read %}
+                                    <span class="badge bg-success">Read</span>
+                                    {% if notification.read_at %}
+                                    <small class="text-muted">on {{ notification.read_at|date:"M d, Y H:i:s" }}</small>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="badge bg-warning">Unread</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Type</th>
+                                <td><span class="badge bg-{{ notification.bootstrap_class }}">{{ notification.get_notification_type_display }}</span></td>
+                            </tr>
+                            <tr>
+                                <th>Priority</th>
+                                <td>
+                                    {% if notification.priority == 'low' %}
+                                    <span class="badge bg-info">{{ notification.get_priority_display }}</span>
+                                    {% elif notification.priority == 'medium' %}
+                                    <span class="badge bg-primary">{{ notification.get_priority_display }}</span>
+                                    {% elif notification.priority == 'high' %}
+                                    <span class="badge bg-warning">{{ notification.get_priority_display }}</span>
+                                    {% elif notification.priority == 'critical' %}
+                                    <span class="badge bg-danger">{{ notification.get_priority_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Related Information</h6>
+                        <table class="table table-sm">
+                            {% if notification.related_object_type %}
+                            <tr>
+                                <th style="width: 150px;">Related Object</th>
+                                <td>
+                                    {{ notification.related_object_type }}
+                                    {% if notification.related_object_id %}
+                                    <span class="badge bg-secondary">{{ notification.related_object_id }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            
+                            {% if notification.link_url %}
+                            <tr>
+                                <th>Related Link</th>
+                                <td>
+                                    <a href="{{ notification.link_url }}" class="btn btn-sm btn-outline-primary">
+                                        {% if notification.link_text %}
+                                        {{ notification.link_text }}
+                                        {% else %}
+                                        View Details
+                                        {% endif %}
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            
+                            {% if notification.extra_data %}
+                            <tr>
+                                <th>Additional Data</th>
+                                <td>
+                                    <pre class="mb-0"><code>{{ notification.extra_data|pprint }}</code></pre>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+                
+                <h6 class="text-muted">Message</h6>
+                <div class="p-3 bg-light rounded">
+                    {{ notification.message|linebreaks }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

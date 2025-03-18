@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rules - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">Rule Management</h1>
+                <div>
+                    <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                        <i class="fas fa-filter me-2"></i> Filter
+                    </button>
+                    <a href="{% url 'rule_engine:test' %}" class="btn btn-primary">
+                        <i class="fas fa-flask me-2"></i> Test Rules
+                    </a>
+                    <a href="{% url 'rule_engine:create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle me-2"></i> New Rule
+                    </a>
+                </div>
+            </div>
+            
+            <div class="collapse mb-4" id="filterCollapse">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="get" action="{% url 'rule_engine:list' %}" class="row g-3">
+                            <div class="col-md-3">
+                                <label for="rule_type" class="form-label">Rule Type</label>
+                                <select name="rule_type" id="rule_type" class="form-select">
+                                    <option value="">All Types</option>
+                                    {% for type_code, type_name in rule_types %}
+                                    <option value="{{ type_code }}" {% if filter_rule_type == type_code %}selected{% endif %}>{{ type_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="is_active" class="form-label">Status</label>
+                                <select name="is_active" id="is_active" class="form-select">
+                                    <option value="">All</option>
+                                    <option value="true" {% if filter_is_active == 'true' %}selected{% endif %}>Active</option>
+                                    <option value="false" {% if filter_is_active == 'false' %}selected{% endif %}>Inactive</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="q" class="form-label">Search</label>
+                                <input type="text" name="q" id="q" class="form-control" placeholder="Search rules..." value="{{ search_query }}">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary me-2">Apply</button>
+                                <a href="{% url 'rule_engine:list' %}" class="btn btn-outline-secondary">Reset</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Rules</h5>
+                    <h2 class="display-4">{{ rule_stats.total }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Active</h5>
+                    <h2 class="display-4">{{ rule_stats.active }}</h2>
+                    <p class="text-muted">{{ rule_stats.active|floatformat:1 }}% of total</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Inactive</h5>
+                    <h2 class="display-4">{{ rule_stats.inactive }}</h2>
+                    <p class="text-muted">{{ rule_stats.inactive|floatformat:1 }}% of total</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Avg. Hit Count</h5>
+                    <h2 class="display-4">{{ rule_stats.avg_hit_count|floatformat:0 }}</h2>
+                    <p class="text-muted">Max: {{ rule_stats.max_hit_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Rule List</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            Sort By
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="sortDropdown">
+                            <li><a class="dropdown-item {% if sort_by == 'priority' %}active{% endif %}" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}sort=priority">Priority (High to Low)</a></li>
+                            <li><a class="dropdown-item {% if sort_by == '-priority' %}active{% endif %}" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}sort=-priority">Priority (Low to High)</a></li>
+                            <li><a class="dropdown-item {% if sort_by == 'name' %}active{% endif %}" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}sort=name">Name (A-Z)</a></li>
+                            <li><a class="dropdown-item {% if sort_by == '-name' %}active{% endif %}" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}sort=-name">Name (Z-A)</a></li>
+                            <li><a class="dropdown-item {% if sort_by == '-hit_count' %}active{% endif %}" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}sort=-hit_count">Hit Count (High to Low)</a></li>
+                            <li><a class="dropdown-item {% if sort_by == 'hit_count' %}active{% endif %}" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}sort=hit_count">Hit Count (Low to High)</a></li>
+                            <li><a class="dropdown-item {% if sort_by == '-created_at' %}active{% endif %}" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}sort=-created_at">Newest First</a></li>
+                            <li><a class="dropdown-item {% if sort_by == 'created_at' %}active{% endif %}" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}sort=created_at">Oldest First</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Action</th>
+                                    <th>Priority</th>
+                                    <th>Risk Score</th>
+                                    <th>Hit Count</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rule in page_obj %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'rule_engine:detail' rule.id %}">{{ rule.name }}</a>
+                                        <div class="small text-muted">v{{ rule.version }}</div>
+                                    </td>
+                                    <td>{{ rule.get_rule_type_display }}</td>
+                                    <td>
+                                        {% if rule.action == 'approve' %}
+                                        <span class="badge bg-success">Approve</span>
+                                        {% elif rule.action == 'reject' %}
+                                        <span class="badge bg-danger">Reject</span>
+                                        {% elif rule.action == 'review' %}
+                                        <span class="badge bg-warning">Flag for Review</span>
+                                        {% else %}
+                                        <span class="badge bg-info">Notify Only</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ rule.priority }}</td>
+                                    <td>{{ rule.risk_score }}</td>
+                                    <td>{{ rule.hit_count }}</td>
+                                    <td>
+                                        {% if rule.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'rule_engine:detail' rule.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'rule_engine:edit' rule.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'rule_engine:test_rule' rule.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-flask"></i>
+                                            </a>
+                                            <form method="post" action="{% url 'rule_engine:toggle' rule.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-{% if rule.is_active %}warning{% else %}success{% endif %}" title="{% if rule.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                    <i class="fas fa-{% if rule.is_active %}pause{% else %}play{% endif %}"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <p class="mb-0">No rules found matching your criteria.</p>
+                                        {% if filter_rule_type or filter_is_active or search_query %}
+                                        <a href="{% url 'rule_engine:list' %}" class="btn btn-sm btn-outline-primary mt-2">Clear Filters</a>
+                                        {% else %}
+                                        <a href="{% url 'rule_engine:create' %}" class="btn btn-sm btn-primary mt-2">Create Your First Rule</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% if page_obj.has_other_pages %}
+                <div class="card-footer">
+                    <nav aria-label="Rule pagination">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}{% if sort_by %}sort={{ sort_by }}&{% endif %}page=1">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}{% if sort_by %}sort={{ sort_by }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}{% if sort_by %}sort={{ sort_by }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}{% if sort_by %}sort={{ sort_by }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if filter_rule_type %}rule_type={{ filter_rule_type }}&{% endif %}{% if filter_is_active %}is_active={{ filter_is_active }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}{% if sort_by %}sort={{ sort_by }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Last</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

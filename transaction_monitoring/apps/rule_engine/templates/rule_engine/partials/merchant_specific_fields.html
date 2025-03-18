@@ -1,0 +1,53 @@
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Merchant-Specific Settings</h5>
+    </div>
+    <div class="card-body">
+        <div class="form-group mb-3">
+            <div class="custom-control custom-switch">
+                <input type="checkbox" class="custom-control-input" id="merchant_specific" name="merchant_specific" 
+                       {% if rule.merchant_specific or form_data.merchant_specific == 'on' %}checked{% endif %}>
+                <label class="custom-control-label" for="merchant_specific">Merchant-Specific Rule</label>
+                <small class="form-text text-muted">If enabled, this rule will only apply to the specified merchants.</small>
+            </div>
+        </div>
+        
+        <div id="merchant_specific_fields" class="{% if not rule.merchant_specific and form_data.merchant_specific != 'on' %}d-none{% endif %}">
+            <div class="form-group mb-3">
+                <label for="included_merchants">Included Merchants</label>
+                <input type="text" class="form-control" id="included_merchants" name="included_merchants" 
+                       value="{% if rule.included_merchants %}{{ rule.included_merchants|join:', ' }}{% elif form_data.included_merchants %}{{ form_data.included_merchants }}{% endif %}"
+                       placeholder="merchant_id1, merchant_id2, ...">
+                <small class="form-text text-muted">
+                    Comma-separated list of merchant IDs this rule applies to. Leave empty to apply to all merchants (except excluded ones).
+                </small>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="excluded_merchants">Excluded Merchants</label>
+                <input type="text" class="form-control" id="excluded_merchants" name="excluded_merchants" 
+                       value="{% if rule.excluded_merchants %}{{ rule.excluded_merchants|join:', ' }}{% elif form_data.excluded_merchants %}{{ form_data.excluded_merchants }}{% endif %}"
+                       placeholder="merchant_id1, merchant_id2, ...">
+                <small class="form-text text-muted">
+                    Comma-separated list of merchant IDs this rule does NOT apply to.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const merchantSpecificCheckbox = document.getElementById('merchant_specific');
+        const merchantSpecificFields = document.getElementById('merchant_specific_fields');
+        
+        // Toggle visibility of merchant-specific fields
+        merchantSpecificCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                merchantSpecificFields.classList.remove('d-none');
+            } else {
+                merchantSpecificFields.classList.add('d-none');
+            }
+        });
+    });
+</script>

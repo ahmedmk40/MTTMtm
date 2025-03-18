@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Rule Set - Transaction Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'rule_engine:ruleset_list' %}">Rule Sets</a></li>
+                    <li class="breadcrumb-item active">Create Rule Set</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2 mb-4">Create New Rule Set</h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Rule Set Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'rule_engine:ruleset_create' %}">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="name" class="form-label">Rule Set Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                    <label class="form-check-label" for="is_active">
+                                        Active
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Select Rules <span class="text-danger">*</span></label>
+                            
+                            <div class="mb-3">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="ruleSearch" placeholder="Search rules...">
+                                    <button class="btn btn-outline-secondary" type="button" id="clearSearch">Clear</button>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="btn-group" role="group">
+                                    {% for type_code, type_name in rule_types %}
+                                    <input type="checkbox" class="btn-check" id="type_{{ type_code }}" autocomplete="off" checked>
+                                    <label class="btn btn-outline-primary" for="type_{{ type_code }}">{{ type_name }}</label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th style="width: 40px;">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="selectAll">
+                                                    </div>
+                                                </th>
+                                                <th>Name</th>
+                                                <th>Type</th>
+                                                <th>Action</th>
+                                                <th>Priority</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for rule in rules %}
+                                            <tr class="rule-row" data-type="{{ rule.rule_type }}">
+                                                <td>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input rule-checkbox" type="checkbox" name="rules" value="{{ rule.id }}" id="rule_{{ rule.id }}">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <label for="rule_{{ rule.id }}" class="form-check-label d-block">
+                                                        {{ rule.name }}
+                                                    </label>
+                                                </td>
+                                                <td>{{ rule.get_rule_type_display }}</td>
+                                                <td>
+                                                    {% if rule.action == 'approve' %}
+                                                    <span class="badge bg-success">Approve</span>
+                                                    {% elif rule.action == 'reject' %}
+                                                    <span class="badge bg-danger">Reject</span>
+                                                    {% elif rule.action == 'review' %}
+                                                    <span class="badge bg-warning">Flag for Review</span>
+                                                    {% else %}
+                                                    <span class="badge bg-info">Notify Only</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ rule.priority }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="form-text mt-2">
+                                <span id="selectedCount">0</span> rules selected
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'rule_engine:ruleset_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Create Rule Set</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select all checkbox
+        const selectAll = document.getElementById('selectAll');
+        const ruleCheckboxes = document.querySelectorAll('.rule-checkbox');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        // Update selected count
+        function updateSelectedCount() {
+            const checkedCount = document.querySelectorAll('.rule-checkbox:checked').length;
+            selectedCount.textContent = checkedCount;
+        }
+        
+        // Select all checkbox
+        selectAll.addEventListener('change', function() {
+            const isChecked = this.checked;
+            
+            // Only select visible rows
+            document.querySelectorAll('.rule-row:not([style*="display: none"]) .rule-checkbox').forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            
+            updateSelectedCount();
+        });
+        
+        // Individual checkboxes
+        ruleCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateSelectedCount();
+                
+                // Update select all checkbox
+                const visibleCheckboxes = document.querySelectorAll('.rule-row:not([style*="display: none"]) .rule-checkbox');
+                const allChecked = Array.from(visibleCheckboxes).every(cb => cb.checked);
+                selectAll.checked = allChecked;
+            });
+        });
+        
+        // Rule type filters
+        const typeFilters = document.querySelectorAll('[id^="type_"]');
+        
+        typeFilters.forEach(filter => {
+            filter.addEventListener('change', function() {
+                const type = this.id.replace('type_', '');
+                const isChecked = this.checked;
+                
+                document.querySelectorAll(`.rule-row[data-type="${type}"]`).forEach(row => {
+                    row.style.display = isChecked ? '' : 'none';
+                });
+                
+                // Update select all checkbox
+                const visibleCheckboxes = document.querySelectorAll('.rule-row:not([style*="display: none"]) .rule-checkbox');
+                const allChecked = Array.from(visibleCheckboxes).every(cb => cb.checked);
+                selectAll.checked = allChecked && visibleCheckboxes.length > 0;
+            });
+        });
+        
+        // Search functionality
+        const ruleSearch = document.getElementById('ruleSearch');
+        const clearSearch = document.getElementById('clearSearch');
+        
+        ruleSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            document.querySelectorAll('.rule-row').forEach(row => {
+                const ruleName = row.querySelector('label').textContent.toLowerCase();
+                const matchesSearch = ruleName.includes(searchTerm);
+                const matchesType = Array.from(typeFilters).some(filter => {
+                    const type = filter.id.replace('type_', '');
+                    return filter.checked && row.dataset.type === type;
+                });
+                
+                row.style.display = (matchesSearch && matchesType) ? '' : 'none';
+            });
+            
+            // Update select all checkbox
+            const visibleCheckboxes = document.querySelectorAll('.rule-row:not([style*="display: none"]) .rule-checkbox');
+            const allChecked = Array.from(visibleCheckboxes).every(cb => cb.checked);
+            selectAll.checked = allChecked && visibleCheckboxes.length > 0;
+        });
+        
+        clearSearch.addEventListener('click', function() {
+            ruleSearch.value = '';
+            
+            // Show all rows that match the type filters
+            document.querySelectorAll('.rule-row').forEach(row => {
+                const matchesType = Array.from(typeFilters).some(filter => {
+                    const type = filter.id.replace('type_', '');
+                    return filter.checked && row.dataset.type === type;
+                });
+                
+                row.style.display = matchesType ? '' : 'none';
+            });
+            
+            // Update select all checkbox
+            const visibleCheckboxes = document.querySelectorAll('.rule-row:not([style*="display: none"]) .rule-checkbox');
+            const allChecked = Array.from(visibleCheckboxes).every(cb => cb.checked);
+            selectAll.checked = allChecked && visibleCheckboxes.length > 0;
+        });
+        
+        // Initialize selected count
+        updateSelectedCount();
+    });
+</script>
+{% endblock %}

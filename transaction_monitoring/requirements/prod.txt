@@ -1,0 +1,15 @@
+# Production requirements for Transaction Monitoring and Fraud Detection System
+
+# Include base requirements
+-r base.txt
+
+# Production-specific packages
+gunicorn>=20.1.0,<21.0.0
+uvicorn>=0.21.1,<0.22.0
+sentry-sdk>=1.17.0,<2.0.0
+django-storages>=1.13.2,<2.0.0
+whitenoise>=6.4.0,<7.0.0
+
+# Security
+django-defender>=0.9.6,<1.0.0
+django-axes>=5.40.1,<6.0.0
