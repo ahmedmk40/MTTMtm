@@ -140,6 +140,34 @@ This will start:
 - Celery worker
 - Celery beat (for scheduled tasks)
 
+### Production Deployment
+
+For production deployment, we provide a comprehensive setup with Docker and Docker Compose:
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit the environment variables for your production environment:
+   ```bash
+   nano .env
+   ```
+
+3. Use the deployment script to deploy the application:
+   ```bash
+   ./deploy.sh -p -b -s -m -i
+   ```
+
+   This will:
+   - Deploy in production mode (-p)
+   - Build the Docker images (-b)
+   - Generate SSL certificates (-s)
+   - Run database migrations (-m)
+   - Initialize rules and ML models (-i)
+
+For detailed production deployment instructions, see the [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md).
+
 ## Usage
 
 ### API Endpoints
