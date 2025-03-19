@@ -65,6 +65,14 @@
                                 </div>
                             </div>
                             <div class="row">
+                                <div class="col-md-6" id="acquiring-response-code-container">
+                                    {{ form.response_code|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6" id="wallet-response-code-container" style="display: none;">
+                                    {{ form.wallet_response_code|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-4">
                                     {{ form.amount|as_crispy_field }}
                                 </div>
@@ -171,6 +179,11 @@
                                     {{ form.website_url|as_crispy_field }}
                                 </div>
                                 <div class="col-md-6">
+                                    {{ form.ip_address|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
                                     {{ form.device_fingerprint|as_crispy_field }}
                                 </div>
                             </div>
@@ -314,6 +327,24 @@
             }
         }
         
+        // Function to toggle response code fields based on transaction type
+        function toggleResponseCodeFields() {
+            var transactionType = $('#id_transaction_type').val();
+            var walletTransactionTypes = [
+                'deposit', 'withdrawal', 'wallet_purchase', 'transfer', 
+                'wallet_topup', 'wallet_to_wallet', 'wallet_to_bank', 
+                'wallet_to_card', 'cashout', 'bill_payment', 'wallet_refund'
+            ];
+            
+            if (walletTransactionTypes.includes(transactionType)) {
+                $('#acquiring-response-code-container').hide();
+                $('#wallet-response-code-container').show();
+            } else {
+                $('#acquiring-response-code-container').show();
+                $('#wallet-response-code-container').hide();
+            }
+        }
+        
         // Function to show/hide card details based on payment method
         function togglePaymentMethodFields() {
             var paymentMethod = $('#id_payment_method_type').val();
@@ -340,11 +371,13 @@
         toggleChannelFields();
         togglePaymentMethodFields();
         toggleBillingAddressFields();
+        toggleResponseCodeFields();
         
         // Event listeners
         $('#id_channel').change(toggleChannelFields);
         $('#id_payment_method_type').change(togglePaymentMethodFields);
         $('#id_billing_same_as_shipping').change(toggleBillingAddressFields);
+        $('#id_transaction_type').change(toggleResponseCodeFields);
     });
 </script>
 {% endblock %}
