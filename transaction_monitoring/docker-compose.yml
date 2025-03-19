@@ -1,65 +1,121 @@
 version: '3.8'
 
 services:
-  # Redis service for Celery broker
+  # PostgreSQL database
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=${DB_NAME:-transaction_monitoring}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # Redis for caching and Celery
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 5
+    restart: always
 
-  # Django web application
+  # Web application
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - .:/app
-    ports:
-      - "8000:8000"
+      - static_files:/app/staticfiles
+      - media_files:/app/media
+      - logs:/var/log/transaction_monitoring
     depends_on:
+      - db
       - redis
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.development
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    restart: unless-stopped
+      - SECRET_KEY=${SECRET_KEY:-change_me_in_production}
+      - DB_NAME=${DB_NAME:-transaction_monitoring}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-admin}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-admin}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
+      - INITIALIZE_RULES=${INITIALIZE_RULES:-true}
+      - INITIALIZE_ML_MODELS=${INITIALIZE_ML_MODELS:-true}
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
+      - GUNICORN_WORKER_CLASS=${GUNICORN_WORKER_CLASS:-sync}
+      - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+    restart: always
 
   # Celery worker
-  celery_worker:
+  celery:
     build: .
-    command: celery -A celery worker --loglevel=info
+    command: celery -A config worker -l info
     volumes:
-      - .:/app
+      - logs:/var/log/transaction_monitoring
     depends_on:
+      - db
       - redis
       - web
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.development
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    restart: unless-stopped
+      - SECRET_KEY=${SECRET_KEY:-change_me_in_production}
+      - DB_NAME=${DB_NAME:-transaction_monitoring}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+    restart: always
 
   # Celery beat for scheduled tasks
-  celery_beat:
+  celery-beat:
     build: .
-    command: celery -A celery beat --loglevel=info
+    command: celery -A config beat -l info
     volumes:
-      - .:/app
+      - logs:/var/log/transaction_monitoring
     depends_on:
+      - db
       - redis
       - web
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.development
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    restart: unless-stopped
+      - SECRET_KEY=${SECRET_KEY:-change_me_in_production}
+      - DB_NAME=${DB_NAME:-transaction_monitoring}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+    restart: always
+
+  # Nginx for serving static files and as a reverse proxy
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - static_files:/var/www/html/static
+      - media_files:/var/www/html/media
+    depends_on:
+      - web
+    restart: always
 
 volumes:
+  postgres_data:
   redis_data:
+  static_files:
+  media_files:
+  logs:
