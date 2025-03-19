@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Country Analysis{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4 mb-4">Country Analysis</h1>
+    <p class="lead mb-4">Detailed analytics for transactions by country</p>
+    
+    <!-- Period Selection -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Time Period</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group" role="group">
+                    <a href="?period=day" class="btn btn-outline-primary {% if period == 'day' %}active{% endif %}">Day</a>
+                    <a href="?period=week" class="btn btn-outline-primary {% if period == 'week' %}active{% endif %}">Week</a>
+                    <a href="?period=month" class="btn btn-outline-primary {% if period == 'month' %}active{% endif %}">Month</a>
+                    <a href="?period=quarter" class="btn btn-outline-primary {% if period == 'quarter' %}active{% endif %}">Quarter</a>
+                    <a href="?period=year" class="btn btn-outline-primary {% if period == 'year' %}active{% endif %}">Year</a>
+                </div>
+                <div class="text-muted">
+                    {{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase">Total Countries</h6>
+                            <h2 class="mb-0">{{ total_countries }}</h2>
+                        </div>
+                        <i class="fas fa-globe fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase">Total Transactions</h6>
+                            <h2 class="mb-0">{{ total_transactions }}</h2>
+                        </div>
+                        <i class="fas fa-credit-card fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase">Top Country</h6>
+                            <h2 class="mb-0">
+                                {% with top_country=country_data|dictsortreversed:"count"|first %}
+                                {{ top_country.country_code|default:"N/A" }}
+                                {% endwith %}
+                            </h2>
+                            <small>
+                                {% with top_country=country_data|dictsortreversed:"count"|first %}
+                                {{ top_country.country_name|default:"Unknown" }}
+                                {% endwith %}
+                            </small>
+                        </div>
+                        <i class="fas fa-flag fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase">High Risk Countries</h6>
+                            <h2 class="mb-0">{{ high_risk_countries }}</h2>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Country Distribution -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Transaction Distribution by Country</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <canvas id="countryDistribution" height="300"></canvas>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h5 class="card-title mb-0">Geographic Summary</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="list-group list-group-flush">
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            Total Countries
+                                            <span class="badge bg-primary rounded-pill">{{ total_countries }}</span>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            Domestic Transactions
+                                            <span class="badge bg-success rounded-pill">
+                                                {% with domestic=country_data|dictsortreversed:"count"|first %}
+                                                {% if domestic.is_domestic %}{{ domestic.count }}{% else %}0{% endif %}
+                                                {% endwith %}
+                                            </span>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            International Transactions
+                                            <span class="badge bg-info rounded-pill">{{ international_count }}</span>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            High Risk Countries
+                                            <span class="badge bg-danger rounded-pill">{{ high_risk_countries }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Country Data Table -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Country Transaction Data</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Country</th>
+                                    <th>Code</th>
+                                    <th>Transactions</th>
+                                    <th>%</th>
+                                    <th>Approved</th>
+                                    <th>Declined</th>
+                                    <th>Decline Rate</th>
+                                    <th>Risk Level</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for country in country_data %}
+                                <tr {% if country.risk_level == 'High' %}class="table-danger"{% elif country.risk_level == 'Medium' %}class="table-warning"{% endif %}>
+                                    <td>{{ country.country_name }}</td>
+                                    <td>{{ country.country_code }}</td>
+                                    <td>{{ country.count }}</td>
+                                    <td>{{ country.percentage|floatformat:1 }}%</td>
+                                    <td>{{ country.approved }}</td>
+                                    <td>{{ country.declined }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar {% if country.decline_rate > 50 %}bg-danger{% elif country.decline_rate > 30 %}bg-warning{% else %}bg-success{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ country.decline_rate }}%;" 
+                                                 aria-valuenow="{{ country.decline_rate }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ country.decline_rate|floatformat:1 }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if country.risk_level == 'High' %}bg-danger{% elif country.risk_level == 'Medium' %}bg-warning{% else %}bg-success{% endif %}">
+                                            {{ country.risk_level }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Country Trends -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Country Transaction Trends</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="countryTrends" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Map -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Global Risk Map</h5>
+                </div>
+                <div class="card-body">
+                    <div id="worldMap" style="height: 500px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap/dist/maps/world.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Country Distribution Chart
+        var countryCtx = document.getElementById('countryDistribution').getContext('2d');
+        var countryChart = new Chart(countryCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for country in country_data|slice:":10" %}
+                    '{{ country.country_name }} ({{ country.country_code }})',
+                    {% endfor %}
+                    {% if country_data|length > 10 %}'Other'{% endif %}
+                ],
+                datasets: [{
+                    label: 'Transaction Count',
+                    data: [
+                        {% for country in country_data|slice:":10" %}
+                        {{ country.count }},
+                        {% endfor %}
+                        {% if country_data|length > 10 %}
+                        {% with other_count=0 %}
+                            {% for country in country_data|slice:"10:" %}
+                                {% with other_count=other_count|add:country.count %}{% endwith %}
+                            {% endfor %}
+                            {{ other_count }}
+                        {% endwith %}
+                        {% endif %}
+                    ],
+                    backgroundColor: [
+                        {% for country in country_data|slice:":10" %}
+                        {% if country.risk_level == 'High' %}
+                        'rgba(220, 53, 69, 0.7)',  // Danger red
+                        {% elif country.risk_level == 'Medium' %}
+                        'rgba(255, 193, 7, 0.7)',  // Warning yellow
+                        {% else %}
+                        'rgba(40, 167, 69, 0.7)',  // Success green
+                        {% endif %}
+                        {% endfor %}
+                        {% if country_data|length > 10 %}'rgba(108, 117, 125, 0.7)'{% endif %}
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + ' transactions (' + 
+                                    (context.parsed.y / {{ total_transactions|default:1 }} * 100).toFixed(1) + '%)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Transaction Count'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Country Trends Chart
+        var trendsCtx = document.getElementById('countryTrends').getContext('2d');
+        
+        // Process data for trends chart
+        var dates = [];
+        {% for country in country_data|slice:":5" %}
+        var {{ country.country_code|lower }}Counts = [];
+        {% endfor %}
+        
+        {% for trend in country_trends %}
+        if (!dates.includes('{{ trend.date|date:"M d" }}')) {
+            dates.push('{{ trend.date|date:"M d" }}');
+            {% for country in country_data|slice:":5" %}
+            {{ country.country_code|lower }}Counts.push(0);
+            {% endfor %}
+        }
+        
+        var index = dates.indexOf('{{ trend.date|date:"M d" }}');
+        
+        {% for country in country_data|slice:":5" %}
+        if ('{{ trend.country_code }}' === '{{ country.country_code }}') {
+            {{ country.country_code|lower }}Counts[index] += {{ trend.count }};
+        }
+        {% endfor %}
+        {% endfor %}
+        
+        var trendsChart = new Chart(trendsCtx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [
+                    {% for country in country_data|slice:":5" %}
+                    {
+                        label: '{{ country.country_name }} ({{ country.country_code }})',
+                        data: {{ country.country_code|lower }}Counts,
+                        borderColor: {% if country.risk_level == 'High' %}'rgba(220, 53, 69, 1)'{% elif country.risk_level == 'Medium' %}'rgba(255, 193, 7, 1)'{% else %}'rgba(40, 167, 69, 1)'{% endif %},
+                        backgroundColor: {% if country.risk_level == 'High' %}'rgba(220, 53, 69, 0.1)'{% elif country.risk_level == 'Medium' %}'rgba(255, 193, 7, 0.1)'{% else %}'rgba(40, 167, 69, 0.1)'{% endif %},
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: false
+                    },
+                    {% endfor %}
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Transaction Count'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // World Map
+        var mapData = {};
+        {% for country in country_data %}
+        mapData['{{ country.country_code }}'] = {{ country.count }};
+        {% endfor %}
+        
+        var map = new jsVectorMap({
+            selector: '#worldMap',
+            map: 'world',
+            zoomButtons: true,
+            zoomOnScroll: true,
+            markersSelectable: true,
+            markers: [
+                {% for country in country_data %}
+                { name: '{{ country.country_name }}', coords: [0, 0], style: { fill: {% if country.risk_level == 'High' %}'#dc3545'{% elif country.risk_level == 'Medium' %}'#ffc107'{% else %}'#28a745'{% endif %} } },
+                {% endfor %}
+            ],
+            markerStyle: {
+                initial: {
+                    r: 9,
+                    strokeWidth: 7,
+                    stroke: '#fff',
+                    fill: '#28a745',
+                    fillOpacity: 1
+                },
+            },
+            markerLabelStyle: {
+                initial: {
+                    fontFamily: 'Roboto',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    fill: '#35373e',
+                }
+            },
+            labels: {
+                markers: {
+                    render: function(marker) {
+                        return marker.name + ' - ' + mapData[marker.name] || 0;
+                    }
+                }
+            },
+            series: {
+                regions: [{
+                    values: mapData,
+                    scale: ['#C8EEFF', '#0071A4'],
+                    normalizeFunction: 'polynomial'
+                }]
+            },
+            regionStyle: {
+                initial: {
+                    fill: '#d1d5db'
+                },
+                hover: {
+                    fill: '#0071A4'
+                }
+            },
+            regionsSelectable: true,
+            onRegionTipShow: function(event, label, code) {
+                label.html(
+                    '<b>' + label.html() + '</b><br>' +
+                    'Transactions: ' + (mapData[code] || 0)
+                );
+            }
+        });
+    });
+</script>
+{% endblock %}
