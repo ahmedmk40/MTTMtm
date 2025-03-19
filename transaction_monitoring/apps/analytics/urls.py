@@ -14,4 +14,5 @@ urlpatterns = [
     path('merchant/', views.merchant_analysis, name='merchant_analysis'),
     path('user/', views.user_analysis, name='user_analysis'),
     path('risk-rankings/', views.risk_rankings, name='risk_rankings'),
+    path('country/', views.country_analysis, name='country_analysis'),
 ]

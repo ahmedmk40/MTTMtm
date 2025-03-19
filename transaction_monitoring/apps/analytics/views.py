@@ -10,6 +10,7 @@ from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
 from django.utils import timezone
 from datetime import timedelta, datetime
 import random
+import pycountry
 
 from apps.transactions.models import Transaction, POSTransaction, EcommerceTransaction, WalletTransaction
 from apps.ml_engine.models import MLPrediction
@@ -484,13 +485,127 @@ def transaction_type_analytics(request):
     end_date = timezone.now()
     start_date = end_date - timedelta(days=days)
     
+    
+@login_required
+def country_analysis(request):
+    """
+    Analytics dashboard for country-based transaction analysis.
+    """
+    # Get time period from request
+    period = request.GET.get('period', 'week')
+    if period == 'day':
+        days = 1
+    elif period == 'week':
+        days = 7
+    elif period == 'month':
+        days = 30
+    elif period == 'quarter':
+        days = 90
+    else:  # year
+        days = 365
+    
+    # Get date range
+    end_date = timezone.now()
+    start_date = end_date - timedelta(days=days)
+    
     # Get all transactions in the period
     transactions = Transaction.objects.filter(
         timestamp__gte=start_date,
         timestamp__lte=end_date
     )
     
-    # Transaction types
+    # Get country data
+    country_data = transactions.values('country_code').annotate(
+        count=Count('id'),
+        approved=Count(Case(
+            When(
+                Q(status='approved') | 
+                Q(response_code='00'),
+                then=F('id')
+            ),
+            default=None,
+            output_field=IntegerField()
+        )),
+        declined=Count(Case(
+            When(
+                Q(status='rejected') | 
+                Q(response_code__in=['01', '05', '12', '14', '30', '41', '43', '51', '54', '55', '57', '58', '61', '91', '96']),
+                then=F('id')
+            ),
+            default=None,
+            output_field=IntegerField()
+        ))
+    ).order_by('-count')
+    
+    # Calculate total transactions
+    total_transactions = transactions.count()
+    
+    # Enrich country data with additional information
+    for country in country_data:
+        # Calculate percentage
+        country['percentage'] = (country['count'] / total_transactions) * 100 if total_transactions > 0 else 0
+        
+        # Calculate decline rate
+        country['decline_rate'] = (country['declined'] / country['count']) * 100 if country['count'] > 0 else 0
+        
+        # Determine risk level
+        if country['decline_rate'] > 50 or country['country_code'] in ['AF', 'KP', 'IR', 'SY', 'VE']:
+            country['risk_level'] = 'High'
+        elif country['decline_rate'] > 30 or country['country_code'] in ['RU', 'BY', 'CU', 'SD', 'MM']:
+            country['risk_level'] = 'Medium'
+        else:
+            country['risk_level'] = 'Low'
+        
+        # Add country name
+        try:
+            country_obj = pycountry.countries.get(alpha_2=country['country_code'])
+            country['country_name'] = country_obj.name if country_obj else 'Unknown'
+        except (AttributeError, KeyError):
+            country['country_name'] = 'Unknown'
+        
+        # Check if domestic (US in this example)
+        country['is_domestic'] = country['country_code'] == 'US'
+    
+    # Get country trends data
+    country_trends = []
+    top_countries = [c['country_code'] for c in country_data[:5]]
+    
+    for day_offset in range(days):
+        current_date = end_date - timedelta(days=day_offset)
+        day_start = current_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = current_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        for country_code in top_countries:
+            count = transactions.filter(
+                timestamp__gte=day_start,
+                timestamp__lte=day_end,
+                country_code=country_code
+            ).count()
+            
+            country_trends.append({
+                'date': day_start,
+                'country_code': country_code,
+                'count': count
+            })
+    
+    # Calculate additional metrics
+    total_countries = country_data.count()
+    international_count = sum(c['count'] for c in country_data if not c.get('is_domestic', False))
+    high_risk_countries = sum(1 for c in country_data if c['risk_level'] == 'High')
+    
+    context = {
+        'period': period,
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_transactions': total_transactions,
+        'country_data': country_data,
+        'country_trends': country_trends,
+        'total_countries': total_countries,
+        'international_count': international_count,
+        'high_risk_countries': high_risk_countries
+    }
+    
+    return render(request, 'analytics/country_analysis.html', context)
     transaction_types_data = []
     for tx_type in transactions.values('transaction_type').distinct():
         type_transactions = transactions.filter(transaction_type=tx_type['transaction_type'])
