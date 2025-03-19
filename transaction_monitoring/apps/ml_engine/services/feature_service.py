@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Any, List
 from django.utils import timezone
 from ..models import FeatureDefinition
+from .advanced_features import extract_advanced_features
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,16 @@ def extract_features(transaction) -> Dict[str, Any]:
         features['mcc'] = transaction.mcc
     else:
         features['mcc'] = 'unknown'
+        
+    # Add response code if available
+    if hasattr(transaction, 'response_code') and transaction.response_code:
+        features['response_code'] = transaction.response_code
+    else:
+        features['response_code'] = '00'  # Default to approved
+    
+    # Extract advanced features
+    advanced_features = extract_advanced_features(transaction)
+    features.update(advanced_features)
     
     logger.debug(f"Extracted {len(features)} features for transaction {transaction.transaction_id}")
     
@@ -147,6 +158,7 @@ def transform_features(features: Dict[str, Any]) -> Dict[str, Any]:
         'source_type': ['wallet', 'bank_account', 'card', 'external'],
         'destination_type': ['wallet', 'bank_account', 'card', 'external'],
         'transaction_purpose': ['deposit', 'withdrawal', 'transfer', 'payment', 'refund'],
+        'response_code': ['00', '01', '05', '12', '14', '30', '41', '43', '51', '54', '55', '57', '58', '61', '91', '96'],
     }
     
     for feature, categories in categorical_features.items():

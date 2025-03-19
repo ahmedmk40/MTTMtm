@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Response Code Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4 mb-4">Response Code Analytics Dashboard</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Response Code Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        {% if distribution_plot %}
+                            <img src="data:image/png;base64,{{ distribution_plot }}" class="img-fluid" alt="Response Code Distribution">
+                        {% else %}
+                            <p class="text-muted">No data available for visualization</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Response Code Trends</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        {% if time_series_plot %}
+                            <img src="data:image/png;base64,{{ time_series_plot }}" class="img-fluid" alt="Response Code Trends">
+                        {% else %}
+                            <p class="text-muted">No data available for visualization</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Response Code by Channel</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        {% if heatmap_plot %}
+                            <img src="data:image/png;base64,{{ heatmap_plot }}" class="img-fluid" alt="Response Code by Channel">
+                        {% else %}
+                            <p class="text-muted">No data available for visualization</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Risk Score by Response Code</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        {% if risk_score_plot %}
+                            <img src="data:image/png;base64,{{ risk_score_plot }}" class="img-fluid" alt="Risk Score by Response Code">
+                        {% else %}
+                            <p class="text-muted">No data available for visualization</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Response Code Flow</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        {% if sankey_plot %}
+                            <img src="data:image/png;base64,{{ sankey_plot }}" class="img-fluid" alt="Response Code Flow">
+                        {% else %}
+                            <p class="text-muted">No data available for visualization</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Response Code Insights</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-3">Top High-Risk Response Codes</h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Response Code</th>
+                                    <th>Description</th>
+                                    <th>Count</th>
+                                    <th>Avg Risk Score</th>
+                                    <th>Fraud Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for code in high_risk_codes %}
+                                <tr>
+                                    <td>{{ code.response_code }}</td>
+                                    <td>{{ code.description }}</td>
+                                    <td>{{ code.count }}</td>
+                                    <td>{{ code.avg_risk_score|floatformat:2 }}</td>
+                                    <td>{{ code.fraud_rate|floatformat:2 }}%</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <h6 class="card-subtitle mt-4 mb-3">Response Code Patterns</h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Pattern</th>
+                                    <th>Count</th>
+                                    <th>Fraud Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pattern in response_patterns %}
+                                <tr>
+                                    <td>{{ pattern.pattern }}</td>
+                                    <td>{{ pattern.count }}</td>
+                                    <td>{{ pattern.fraud_rate|floatformat:2 }}%</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Add any JavaScript for interactivity here
+    });
+</script>
+{% endblock %}

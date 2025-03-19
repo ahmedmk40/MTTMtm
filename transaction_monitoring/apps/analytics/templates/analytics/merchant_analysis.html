@@ -1,0 +1,407 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Merchant Analysis{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4 mb-4">Merchant Analysis</h1>
+    
+    <!-- Merchant Search Form -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">Search Merchant</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url 'analytics:merchant_analysis' %}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="merchant_id">Merchant ID</label>
+                            <input type="text" class="form-control" id="merchant_id" name="merchant_id" 
+                                value="{{ request.GET.merchant_id|default:'' }}" placeholder="Enter merchant ID">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="date_range">Date Range</label>
+                            <select class="form-control" id="date_range" name="date_range">
+                                <option value="7" {% if date_range == 7 %}selected{% endif %}>Last 7 days</option>
+                                <option value="30" {% if date_range == 30 %}selected{% endif %}>Last 30 days</option>
+                                <option value="90" {% if date_range == 90 %}selected{% endif %}>Last 90 days</option>
+                                <option value="180" {% if date_range == 180 %}selected{% endif %}>Last 180 days</option>
+                                <option value="365" {% if date_range == 365 %}selected{% endif %}>Last 365 days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary mb-3">Analyze</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    {% if merchant_id %}
+    <!-- Merchant Overview -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">Merchant Overview: {{ merchant_id }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Total Transactions</h6>
+                            <h2 class="card-title">{{ total_transactions }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Total Volume</h6>
+                            <h2 class="card-title">${{ total_volume|floatformat:2 }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Avg. Transaction Value</h6>
+                            <h2 class="card-title">${{ avg_transaction|floatformat:2 }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Risk Score</h6>
+                            <h2 class="card-title">{{ risk_score|floatformat:1 }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transaction Trends -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Transaction Volume Over Time</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="transactionVolumeChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Transaction Count Over Time</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="transactionCountChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transaction Channels and Response Codes -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Transaction Channels</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="channelDistributionChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Response Code Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="responseCodeChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Analysis -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">Risk Analysis</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="riskScoreChart" height="300"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Risk Factor</th>
+                                    <th>Value</th>
+                                    <th>Industry Avg</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Chargeback Rate</td>
+                                    <td>{{ chargeback_rate|floatformat:2 }}%</td>
+                                    <td>0.9%</td>
+                                    <td>
+                                        {% if chargeback_rate > 1.0 %}
+                                            <span class="badge bg-danger">High</span>
+                                        {% elif chargeback_rate > 0.5 %}
+                                            <span class="badge bg-warning">Medium</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Low</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Decline Rate</td>
+                                    <td>{{ decline_rate|floatformat:2 }}%</td>
+                                    <td>5.0%</td>
+                                    <td>
+                                        {% if decline_rate > 10.0 %}
+                                            <span class="badge bg-danger">High</span>
+                                        {% elif decline_rate > 5.0 %}
+                                            <span class="badge bg-warning">Medium</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Low</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Fraud Rate</td>
+                                    <td>{{ fraud_rate|floatformat:2 }}%</td>
+                                    <td>0.1%</td>
+                                    <td>
+                                        {% if fraud_rate > 0.5 %}
+                                            <span class="badge bg-danger">High</span>
+                                        {% elif fraud_rate > 0.1 %}
+                                            <span class="badge bg-warning">Medium</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Low</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>High-Risk Transactions</td>
+                                    <td>{{ high_risk_rate|floatformat:2 }}%</td>
+                                    <td>2.0%</td>
+                                    <td>
+                                        {% if high_risk_rate > 5.0 %}
+                                            <span class="badge bg-danger">High</span>
+                                        {% elif high_risk_rate > 2.0 %}
+                                            <span class="badge bg-warning">Medium</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Low</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Transactions -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Recent Transactions</h5>
+            <a href="{% url 'transactions:list' %}?merchant_id={{ merchant_id }}" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Channel</th>
+                            <th>Response Code</th>
+                            <th>Risk Score</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in recent_transactions %}
+                        <tr>
+                            <td><a href="{% url 'transactions:detail' tx.transaction_id %}">{{ tx.transaction_id }}</a></td>
+                            <td>${{ tx.amount|floatformat:2 }}</td>
+                            <td>
+                                {% if tx.status == 'approved' %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% elif tx.status == 'rejected' %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% elif tx.status == 'flagged' %}
+                                    <span class="badge bg-warning">Flagged</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ tx.status|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ tx.channel|title }}</td>
+                            <td>{{ tx.response_code|default:"-" }}</td>
+                            <td>
+                                {% if tx.risk_score %}
+                                    {% if tx.risk_score > 80 %}
+                                        <span class="badge bg-danger">{{ tx.risk_score|floatformat:1 }}</span>
+                                    {% elif tx.risk_score > 50 %}
+                                        <span class="badge bg-warning">{{ tx.risk_score|floatformat:1 }}</span>
+                                    {% else %}
+                                        <span class="badge bg-success">{{ tx.risk_score|floatformat:1 }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ tx.timestamp|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No transactions found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <p>Enter a merchant ID to view detailed analysis.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if merchant_id %}
+    // Transaction Volume Chart
+    var volumeCtx = document.getElementById('transactionVolumeChart').getContext('2d');
+    var volumeChart = new Chart(volumeCtx, {
+        type: 'line',
+        data: {
+            labels: {{ volume_dates|safe }},
+            datasets: [{
+                label: 'Transaction Volume ($)',
+                data: {{ volume_data|safe }},
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Transaction Count Chart
+    var countCtx = document.getElementById('transactionCountChart').getContext('2d');
+    var countChart = new Chart(countCtx, {
+        type: 'line',
+        data: {
+            labels: {{ count_dates|safe }},
+            datasets: [{
+                label: 'Transaction Count',
+                data: {{ count_data|safe }},
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Channel Distribution Chart
+    var channelCtx = document.getElementById('channelDistributionChart').getContext('2d');
+    var channelChart = new Chart(channelCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ channel_labels|safe }},
+            datasets: [{
+                data: {{ channel_data|safe }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Response Code Chart
+    var responseCtx = document.getElementById('responseCodeChart').getContext('2d');
+    var responseChart = new Chart(responseCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ response_code_labels|safe }},
+            datasets: [{
+                label: 'Count',
+                data: {{ response_code_data|safe }},
+                backgroundColor: 'rgba(255, 159, 64, 0.7)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Risk Score Chart
+    var riskCtx = document.getElementById('riskScoreChart').getContext('2d');
+    var riskChart = new Chart(riskCtx, {
+        type: 'line',
+        data: {
+            labels: {{ risk_dates|safe }},
+            datasets: [{
+                label: 'Average Risk Score',
+                data: {{ risk_data|safe }},
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}
