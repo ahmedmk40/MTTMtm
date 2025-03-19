@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Risk Rankings{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4 mb-4">Risk Rankings</h1>
+    
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">Filter Options</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url 'analytics:risk_rankings' %}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="date_range">Date Range</label>
+                            <select class="form-control" id="date_range" name="date_range">
+                                <option value="7" {% if date_range == 7 %}selected{% endif %}>Last 7 days</option>
+                                <option value="30" {% if date_range == 30 %}selected{% endif %}>Last 30 days</option>
+                                <option value="90" {% if date_range == 90 %}selected{% endif %}>Last 90 days</option>
+                                <option value="180" {% if date_range == 180 %}selected{% endif %}>Last 180 days</option>
+                                <option value="365" {% if date_range == 365 %}selected{% endif %}>Last 365 days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="min_transactions">Minimum Transactions</label>
+                            <input type="number" class="form-control" id="min_transactions" name="min_transactions" 
+                                value="{{ min_transactions }}" min="1" max="1000">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="risk_threshold">Risk Threshold</label>
+                            <input type="number" class="form-control" id="risk_threshold" name="risk_threshold" 
+                                value="{{ risk_threshold }}" min="0" max="100">
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary mb-3">Apply Filters</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Merchant Risk Rankings -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Merchant Risk Rankings</h5>
+            <span class="badge bg-info">{{ merchant_count }} Merchants</span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="merchantRiskChart" height="300"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Merchant ID</th>
+                                    <th>Risk Score</th>
+                                    <th>Transactions</th>
+                                    <th>Volume</th>
+                                    <th>Decline Rate</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for merchant in top_merchants %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ merchant.merchant_id }}</td>
+                                    <td>
+                                        {% if merchant.risk_score > 70 %}
+                                            <span class="badge bg-danger">{{ merchant.risk_score|floatformat:1 }}</span>
+                                        {% elif merchant.risk_score > 50 %}
+                                            <span class="badge bg-warning">{{ merchant.risk_score|floatformat:1 }}</span>
+                                        {% else %}
+                                            <span class="badge bg-success">{{ merchant.risk_score|floatformat:1 }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ merchant.transaction_count }}</td>
+                                    <td>${{ merchant.volume|floatformat:2 }}</td>
+                                    <td>{{ merchant.decline_rate|floatformat:1 }}%</td>
+                                    <td>
+                                        <a href="{% url 'analytics:merchant_analysis' %}?merchant_id={{ merchant.merchant_id }}&date_range={{ date_range }}" class="btn btn-sm btn-outline-primary">Analyze</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No merchants found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Risk Rankings -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">User Risk Rankings</h5>
+            <span class="badge bg-info">{{ user_count }} Users</span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="userRiskChart" height="300"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>User ID</th>
+                                    <th>Risk Score</th>
+                                    <th>Transactions</th>
+                                    <th>Volume</th>
+                                    <th>Velocity</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in top_users %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ user.user_id }}</td>
+                                    <td>
+                                        {% if user.risk_score > 70 %}
+                                            <span class="badge bg-danger">{{ user.risk_score|floatformat:1 }}</span>
+                                        {% elif user.risk_score > 50 %}
+                                            <span class="badge bg-warning">{{ user.risk_score|floatformat:1 }}</span>
+                                        {% else %}
+                                            <span class="badge bg-success">{{ user.risk_score|floatformat:1 }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user.transaction_count }}</td>
+                                    <td>${{ user.volume|floatformat:2 }}</td>
+                                    <td>{{ user.velocity|floatformat:2 }}</td>
+                                    <td>
+                                        <a href="{% url 'analytics:user_analysis' %}?user_id={{ user.user_id }}&date_range={{ date_range }}" class="btn btn-sm btn-outline-primary">Analyze</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No users found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Distribution -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Merchant Risk Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="merchantRiskDistributionChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">User Risk Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="userRiskDistributionChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Factors -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">Risk Factors Comparison</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="merchantRiskFactorsChart" height="300"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <canvas id="userRiskFactorsChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Trends -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">Risk Score Trends</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="riskTrendsChart" height="300"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Merchant Risk Chart (Top 10)
+    var merchantRiskCtx = document.getElementById('merchantRiskChart').getContext('2d');
+    var merchantRiskChart = new Chart(merchantRiskCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ merchant_labels|safe }},
+            datasets: [{
+                label: 'Risk Score',
+                data: {{ merchant_risk_scores|safe }},
+                backgroundColor: function(context) {
+                    var value = context.dataset.data[context.dataIndex];
+                    return value > 70 ? 'rgba(255, 99, 132, 0.7)' : 
+                           value > 50 ? 'rgba(255, 205, 86, 0.7)' : 
+                           'rgba(75, 192, 192, 0.7)';
+                },
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+    
+    // User Risk Chart (Top 10)
+    var userRiskCtx = document.getElementById('userRiskChart').getContext('2d');
+    var userRiskChart = new Chart(userRiskCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ user_labels|safe }},
+            datasets: [{
+                label: 'Risk Score',
+                data: {{ user_risk_scores|safe }},
+                backgroundColor: function(context) {
+                    var value = context.dataset.data[context.dataIndex];
+                    return value > 70 ? 'rgba(255, 99, 132, 0.7)' : 
+                           value > 50 ? 'rgba(255, 205, 86, 0.7)' : 
+                           'rgba(75, 192, 192, 0.7)';
+                },
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+    
+    // Merchant Risk Distribution
+    var merchantDistCtx = document.getElementById('merchantRiskDistributionChart').getContext('2d');
+    var merchantDistChart = new Chart(merchantDistCtx, {
+        type: 'pie',
+        data: {
+            labels: ['High Risk (>70)', 'Medium Risk (50-70)', 'Low Risk (<50)'],
+            datasets: [{
+                data: {{ merchant_risk_distribution|safe }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(255, 205, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // User Risk Distribution
+    var userDistCtx = document.getElementById('userRiskDistributionChart').getContext('2d');
+    var userDistChart = new Chart(userDistCtx, {
+        type: 'pie',
+        data: {
+            labels: ['High Risk (>70)', 'Medium Risk (50-70)', 'Low Risk (<50)'],
+            datasets: [{
+                data: {{ user_risk_distribution|safe }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(255, 205, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Merchant Risk Factors
+    var merchantFactorsCtx = document.getElementById('merchantRiskFactorsChart').getContext('2d');
+    var merchantFactorsChart = new Chart(merchantFactorsCtx, {
+        type: 'radar',
+        data: {
+            labels: ['Decline Rate', 'High-Risk Transactions', 'Cross-Border', 'Chargeback Rate', 'Velocity'],
+            datasets: [
+                {
+                    label: 'High-Risk Merchants',
+                    data: {{ merchant_high_risk_factors|safe }},
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(255, 99, 132, 1)'
+                },
+                {
+                    label: 'Low-Risk Merchants',
+                    data: {{ merchant_low_risk_factors|safe }},
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            elements: {
+                line: {
+                    borderWidth: 3
+                }
+            },
+            scales: {
+                r: {
+                    angleLines: {
+                        display: true
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 100
+                }
+            }
+        }
+    });
+    
+    // User Risk Factors
+    var userFactorsCtx = document.getElementById('userRiskFactorsChart').getContext('2d');
+    var userFactorsChart = new Chart(userFactorsCtx, {
+        type: 'radar',
+        data: {
+            labels: ['Transaction Frequency', 'Average Amount', 'Decline Rate', 'Velocity', 'Cross-Border'],
+            datasets: [
+                {
+                    label: 'High-Risk Users',
+                    data: {{ user_high_risk_factors|safe }},
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(255, 99, 132, 1)'
+                },
+                {
+                    label: 'Low-Risk Users',
+                    data: {{ user_low_risk_factors|safe }},
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            elements: {
+                line: {
+                    borderWidth: 3
+                }
+            },
+            scales: {
+                r: {
+                    angleLines: {
+                        display: true
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 100
+                }
+            }
+        }
+    });
+    
+    // Risk Trends Chart
+    var trendsCtx = document.getElementById('riskTrendsChart').getContext('2d');
+    var trendsChart = new Chart(trendsCtx, {
+        type: 'line',
+        data: {
+            labels: {{ trend_dates|safe }},
+            datasets: [
+                {
+                    label: 'Merchant Risk',
+                    data: {{ merchant_risk_trend|safe }},
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                },
+                {
+                    label: 'User Risk',
+                    data: {{ user_risk_trend|safe }},
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

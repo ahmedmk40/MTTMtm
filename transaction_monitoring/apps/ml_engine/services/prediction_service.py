@@ -14,6 +14,7 @@ from django.conf import settings
 from django.utils import timezone
 from ..models import MLModel, MLPrediction
 from .feature_service import extract_features, transform_features
+from .explainability_service import generate_shap_explanation, explain_response_code_prediction
 
 logger = logging.getLogger(__name__)
 
@@ -109,8 +110,8 @@ def get_fraud_prediction(transaction) -> Dict[str, Any]:
                 
                 prediction_time = (time.time() - prediction_start) * 1000
                 
-                # Generate explanation
-                explanation = generate_explanation(ml_model, transformed_features)
+                # Generate explanation using SHAP
+                explanation = generate_shap_explanation(ml_model, transformed_features)
                 
                 # Save prediction to database
                 MLPrediction.objects.create(
@@ -162,6 +163,10 @@ def get_fraud_prediction(transaction) -> Dict[str, Any]:
         result['risk_score'] = final_risk_score
         result['is_fraudulent'] = is_fraudulent
         result['model_scores'] = model_scores
+        
+        # Add response code specific explanation if available
+        if hasattr(transaction, 'response_code') and transaction.response_code:
+            result['response_code_explanation'] = explain_response_code_prediction(transaction, result)
         
         # Use the explanation from the highest-weighted model type
         if result['models_used']:

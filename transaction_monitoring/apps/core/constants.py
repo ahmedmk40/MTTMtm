@@ -31,6 +31,61 @@ RESPONSE_ERROR = 'error'
 RESPONSE_TIMEOUT = 'timeout'
 RESPONSE_FLAGGED = 'flagged'
 
+# Response Code Risk Categories
+HIGH_RISK_RESPONSE_CODES = [
+    '14',  # Invalid Card Number
+    '41',  # Lost Card
+    '43',  # Stolen Card
+    '57',  # Transaction Not Permitted to Cardholder
+    '58',  # Transaction Not Permitted to Terminal
+    '92',  # Wallet Blocked
+    '94',  # Wallet Account Not Found
+]
+
+MEDIUM_RISK_RESPONSE_CODES = [
+    '01',  # Refer to Issuer
+    '05',  # Do Not Honor
+    '12',  # Invalid Transaction
+    '30',  # Format Error
+    '51',  # Insufficient Funds
+    '54',  # Expired Card
+    '55',  # Incorrect PIN
+    '61',  # Exceeds Withdrawal Limit
+    '91',  # Issuer or Switch Inoperative
+    '96',  # System Malfunction
+]
+
+# Response Code Descriptions
+RESPONSE_CODE_DESCRIPTIONS = {
+    # Card response codes
+    '00': 'Approved',
+    '01': 'Refer to Issuer',
+    '05': 'Do Not Honor',
+    '12': 'Invalid Transaction',
+    '14': 'Invalid Card Number',
+    '30': 'Format Error',
+    '41': 'Lost Card',
+    '43': 'Stolen Card',
+    '51': 'Insufficient Funds',
+    '54': 'Expired Card',
+    '55': 'Incorrect PIN',
+    '57': 'Transaction Not Permitted to Cardholder',
+    '58': 'Transaction Not Permitted to Terminal',
+    '61': 'Exceeds Withdrawal Limit',
+    '91': 'Issuer or Switch Inoperative',
+    '96': 'System Malfunction',
+    
+    # Wallet response codes
+    'W00': 'Success',
+    'W01': 'Insufficient Wallet Balance',
+    'W03': 'Invalid Wallet Account',
+    'W05': 'Unauthorized Transaction',
+    'W12': 'Invalid Transaction',
+    'W14': 'Invalid Account Number',
+    'W92': 'Wallet Blocked',
+    'W94': 'Wallet Account Not Found',
+}
+
 # Risk Levels
 RISK_LEVEL_LOW = 'low'
 RISK_LEVEL_MEDIUM = 'medium'

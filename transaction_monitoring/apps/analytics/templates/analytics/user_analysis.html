@@ -1,0 +1,498 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}User ID Analysis{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4 mb-4">User ID Analysis</h1>
+    
+    <!-- User Search Form -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">Search User</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url 'analytics:user_analysis' %}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="user_id">User ID</label>
+                            <input type="text" class="form-control" id="user_id" name="user_id" 
+                                value="{{ request.GET.user_id|default:'' }}" placeholder="Enter user ID">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="date_range">Date Range</label>
+                            <select class="form-control" id="date_range" name="date_range">
+                                <option value="7" {% if date_range == 7 %}selected{% endif %}>Last 7 days</option>
+                                <option value="30" {% if date_range == 30 %}selected{% endif %}>Last 30 days</option>
+                                <option value="90" {% if date_range == 90 %}selected{% endif %}>Last 90 days</option>
+                                <option value="180" {% if date_range == 180 %}selected{% endif %}>Last 180 days</option>
+                                <option value="365" {% if date_range == 365 %}selected{% endif %}>Last 365 days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary mb-3">Analyze</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    {% if user_id %}
+    <!-- User Overview -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">User Overview: {{ user_id }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Total Transactions</h6>
+                            <h2 class="card-title">{{ total_transactions }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Total Volume</h6>
+                            <h2 class="card-title">${{ total_volume|floatformat:2 }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Avg. Transaction Value</h6>
+                            <h2 class="card-title">${{ avg_transaction|floatformat:2 }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h6 class="card-subtitle mb-2 text-muted">Risk Score</h6>
+                            <h2 class="card-title">{{ risk_score|floatformat:1 }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transaction Trends -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Transaction Volume Over Time</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="transactionVolumeChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Transaction Count Over Time</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="transactionCountChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transaction Channels and Merchants -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Transaction Channels</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="channelDistributionChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Top Merchants</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="merchantDistributionChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Behavior Analysis -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">User Behavior Analysis</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="behaviorChart" height="300"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Behavior Metric</th>
+                                    <th>Value</th>
+                                    <th>User Avg</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Transaction Frequency</td>
+                                    <td>{{ transaction_frequency|floatformat:2 }} per day</td>
+                                    <td>0.5 per day</td>
+                                    <td>
+                                        {% if transaction_frequency > 1.0 %}
+                                            <span class="badge bg-info">High</span>
+                                        {% elif transaction_frequency > 0.3 %}
+                                            <span class="badge bg-success">Normal</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Low</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Decline Rate</td>
+                                    <td>{{ decline_rate|floatformat:2 }}%</td>
+                                    <td>5.0%</td>
+                                    <td>
+                                        {% if decline_rate > 10.0 %}
+                                            <span class="badge bg-danger">High</span>
+                                        {% elif decline_rate > 5.0 %}
+                                            <span class="badge bg-warning">Medium</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Low</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Velocity</td>
+                                    <td>{{ velocity|floatformat:2 }}</td>
+                                    <td>1.0</td>
+                                    <td>
+                                        {% if velocity > 2.0 %}
+                                            <span class="badge bg-danger">High</span>
+                                        {% elif velocity > 1.0 %}
+                                            <span class="badge bg-warning">Medium</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Low</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Cross-Border Activity</td>
+                                    <td>{{ cross_border_rate|floatformat:2 }}%</td>
+                                    <td>10.0%</td>
+                                    <td>
+                                        {% if cross_border_rate > 30.0 %}
+                                            <span class="badge bg-danger">High</span>
+                                        {% elif cross_border_rate > 10.0 %}
+                                            <span class="badge bg-warning">Medium</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Low</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Device Analysis -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">Device Analysis</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="deviceChart" height="300"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Device ID</th>
+                                    <th>Transactions</th>
+                                    <th>Last Used</th>
+                                    <th>Risk Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for device in devices %}
+                                <tr>
+                                    <td>{{ device.device_id }}</td>
+                                    <td>{{ device.count }}</td>
+                                    <td>{{ device.last_used|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if device.risk_score > 70 %}
+                                            <span class="badge bg-danger">{{ device.risk_score|floatformat:1 }}</span>
+                                        {% elif device.risk_score > 40 %}
+                                            <span class="badge bg-warning">{{ device.risk_score|floatformat:1 }}</span>
+                                        {% else %}
+                                            <span class="badge bg-success">{{ device.risk_score|floatformat:1 }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No device data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Transactions -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Recent Transactions</h5>
+            <a href="{% url 'transactions:list' %}?user_id={{ user_id }}" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Merchant</th>
+                            <th>Channel</th>
+                            <th>Risk Score</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in recent_transactions %}
+                        <tr>
+                            <td><a href="{% url 'transactions:detail' tx.transaction_id %}">{{ tx.transaction_id }}</a></td>
+                            <td>${{ tx.amount|floatformat:2 }}</td>
+                            <td>
+                                {% if tx.status == 'approved' %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% elif tx.status == 'rejected' %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% elif tx.status == 'flagged' %}
+                                    <span class="badge bg-warning">Flagged</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ tx.status|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ tx.merchant_id|default:"-" }}</td>
+                            <td>{{ tx.channel|title }}</td>
+                            <td>
+                                {% if tx.risk_score %}
+                                    {% if tx.risk_score > 80 %}
+                                        <span class="badge bg-danger">{{ tx.risk_score|floatformat:1 }}</span>
+                                    {% elif tx.risk_score > 50 %}
+                                        <span class="badge bg-warning">{{ tx.risk_score|floatformat:1 }}</span>
+                                    {% else %}
+                                        <span class="badge bg-success">{{ tx.risk_score|floatformat:1 }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ tx.timestamp|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No transactions found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <p>Enter a user ID to view detailed analysis.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if user_id %}
+    // Transaction Volume Chart
+    var volumeCtx = document.getElementById('transactionVolumeChart').getContext('2d');
+    var volumeChart = new Chart(volumeCtx, {
+        type: 'line',
+        data: {
+            labels: {{ volume_dates|safe }},
+            datasets: [{
+                label: 'Transaction Volume ($)',
+                data: {{ volume_data|safe }},
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Transaction Count Chart
+    var countCtx = document.getElementById('transactionCountChart').getContext('2d');
+    var countChart = new Chart(countCtx, {
+        type: 'line',
+        data: {
+            labels: {{ count_dates|safe }},
+            datasets: [{
+                label: 'Transaction Count',
+                data: {{ count_data|safe }},
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Channel Distribution Chart
+    var channelCtx = document.getElementById('channelDistributionChart').getContext('2d');
+    var channelChart = new Chart(channelCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ channel_labels|safe }},
+            datasets: [{
+                data: {{ channel_data|safe }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Merchant Distribution Chart
+    var merchantCtx = document.getElementById('merchantDistributionChart').getContext('2d');
+    var merchantChart = new Chart(merchantCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ merchant_labels|safe }},
+            datasets: [{
+                label: 'Transaction Count',
+                data: {{ merchant_data|safe }},
+                backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y'
+        }
+    });
+    
+    // User Behavior Chart
+    var behaviorCtx = document.getElementById('behaviorChart').getContext('2d');
+    var behaviorChart = new Chart(behaviorCtx, {
+        type: 'radar',
+        data: {
+            labels: ['Transaction Frequency', 'Average Amount', 'Decline Rate', 'Velocity', 'Cross-Border'],
+            datasets: [{
+                label: 'User Behavior',
+                data: {{ behavior_data|safe }},
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(255, 99, 132, 1)'
+            }, {
+                label: 'Average User',
+                data: [0.5, 100, 5, 1, 10],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(54, 162, 235, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            elements: {
+                line: {
+                    borderWidth: 3
+                }
+            }
+        }
+    });
+    
+    // Device Chart
+    var deviceCtx = document.getElementById('deviceChart').getContext('2d');
+    var deviceChart = new Chart(deviceCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ device_labels|safe }},
+            datasets: [{
+                data: {{ device_data|safe }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}
