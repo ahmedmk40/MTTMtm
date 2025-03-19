@@ -24,6 +24,18 @@ class TransactionCreateForm(forms.Form):
         choices=Transaction.CHANNEL_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+    response_code = forms.ChoiceField(
+        label=_('Response Code'),
+        choices=[('', '---')] + [(code, f"{code} - {desc}") for code, desc in Transaction.ACQUIRING_RESPONSE_CODES.items()],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_response_code'})
+    )
+    wallet_response_code = forms.ChoiceField(
+        label=_('Wallet Response Code'),
+        choices=[('', '---')] + [(code, f"{code} - {desc}") for code, desc in Transaction.WALLET_RESPONSE_CODES.items()],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_wallet_response_code'})
+    )
     amount = forms.DecimalField(
         label=_('Amount'),
         min_value=0.01,
@@ -162,6 +174,12 @@ class TransactionCreateForm(forms.Form):
         label=_('Website URL'),
         required=False,
         widget=forms.URLInput(attrs={'class': 'form-control'})
+    )
+    ip_address = forms.CharField(
+        label=_('IP Address'),
+        required=False,
+        max_length=45,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
     )
     is_3ds_verified = forms.BooleanField(
         label=_('3DS Verified'),
@@ -311,7 +329,7 @@ class TransactionCreateForm(forms.Form):
                     self.add_error(field, _('This field is required for POS transactions.'))
         
         elif channel == 'ecommerce':
-            required_fields = ['website_url']
+            required_fields = ['website_url', 'ip_address']
             for field in required_fields:
                 if not cleaned_data.get(field):
                     self.add_error(field, _('This field is required for E-commerce transactions.'))
@@ -356,6 +374,13 @@ class TransactionCreateForm(forms.Form):
         transaction_data = {
             'transaction_type': data.get('transaction_type'),
             'channel': channel,
+            
+            # Set the appropriate response code based on transaction type
+            'response_code': data.get('wallet_response_code') if data.get('transaction_type') in [
+                'deposit', 'withdrawal', 'wallet_purchase', 'transfer', 
+                'wallet_topup', 'wallet_to_wallet', 'wallet_to_bank', 
+                'wallet_to_card', 'cashout', 'bill_payment', 'wallet_refund'
+            ] else data.get('response_code'),
             'amount': float(data.get('amount')),
             'currency': data.get('currency'),
             'user_id': data.get('user_id'),
@@ -413,6 +438,7 @@ class TransactionCreateForm(forms.Form):
         elif channel == 'ecommerce':
             transaction_data.update({
                 'website_url': data.get('website_url'),
+                'ip_address': data.get('ip_address'),
                 'is_3ds_verified': data.get('is_3ds_verified', False),
                 'device_fingerprint': data.get('device_fingerprint')
             })

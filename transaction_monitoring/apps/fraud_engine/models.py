@@ -6,12 +6,33 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from apps.core.models import TimeStampedModel
 
+# Import models from separate files
+from .risk_score import RiskScore
+
 
 class FraudDetectionResult(TimeStampedModel):
     """
     Model to store fraud detection results for transactions.
     """
-    transaction_id = models.CharField(_('Transaction ID'), max_length=100, unique=True)
+    DETECTION_TYPE_CHOICES = (
+        ('sequential_account', _('Sequential Account')),
+        ('round_amount', _('Round Amount')),
+        ('identical_amount', _('Identical Amount')),
+        ('multiple_transactions', _('Multiple Transactions')),
+        ('other', _('Other')),
+    )
+    
+    RISK_LEVEL_CHOICES = (
+        ('high', _('High')),
+        ('medium', _('Medium')),
+        ('low', _('Low')),
+    )
+    
+    transaction_id = models.CharField(_('Transaction ID'), max_length=100, null=True, blank=True)
+    user_id = models.CharField(_('User ID'), max_length=100, null=True, blank=True)
+    detection_type = models.CharField(_('Detection Type'), max_length=50, choices=DETECTION_TYPE_CHOICES, default='other')
+    risk_level = models.CharField(_('Risk Level'), max_length=20, choices=RISK_LEVEL_CHOICES, default='medium')
+    details = models.TextField(_('Details'), null=True, blank=True)
     risk_score = models.DecimalField(_('Risk Score'), max_digits=5, decimal_places=2)
     is_fraudulent = models.BooleanField(_('Is Fraudulent'), default=False)
     decision = models.CharField(
@@ -23,7 +44,7 @@ class FraudDetectionResult(TimeStampedModel):
             ('review', _('Review')),
         )
     )
-    processing_time = models.FloatField(_('Processing Time (ms)'))
+    processing_time = models.FloatField(_('Processing Time (ms)'), null=True, blank=True)
     
     # Results from different engines
     block_check_result = models.JSONField(_('Block Check Result'), default=dict)
@@ -40,13 +61,21 @@ class FraudDetectionResult(TimeStampedModel):
         verbose_name_plural = _('Fraud Detection Results')
         indexes = [
             models.Index(fields=['transaction_id']),
+            models.Index(fields=['user_id']),
+            models.Index(fields=['detection_type']),
+            models.Index(fields=['risk_level']),
             models.Index(fields=['is_fraudulent']),
             models.Index(fields=['decision']),
             models.Index(fields=['created_at']),
         ]
     
     def __str__(self):
-        return f"{self.transaction_id} - Score: {self.risk_score} - Decision: {self.decision}"
+        if self.transaction_id:
+            return f"{self.transaction_id} - {self.get_detection_type_display()} - {self.get_risk_level_display()}"
+        elif self.user_id:
+            return f"{self.user_id} - {self.get_detection_type_display()} - {self.get_risk_level_display()}"
+        else:
+            return f"{self.id} - {self.get_detection_type_display()} - {self.get_risk_level_display()}"
 
 
 class BlockList(TimeStampedModel):
