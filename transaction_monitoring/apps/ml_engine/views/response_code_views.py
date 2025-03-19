@@ -53,18 +53,65 @@ def response_code_dashboard(request):
     else:
         days = 30  # Default to month
     
+    # Debug logging
+    logger.info(f"Generating response code dashboard for period: {period}, days: {days}")
+    
+    # Check if we have transactions with response codes
+    from apps.transactions.models import Transaction
+    tx_count = Transaction.objects.filter(response_code__isnull=False).count()
+    logger.info(f"Found {tx_count} transactions with response codes")
+    
     # Generate visualizations
-    distribution_plot = generate_response_code_distribution_plot(days=days)
-    time_series_plot = generate_response_code_time_series(days=days, interval='day' if days <= 7 else 'week')
-    heatmap_plot = generate_response_code_heatmap(days=days)
-    risk_score_plot = generate_risk_score_by_response_code(days=days)
-    sankey_plot = generate_response_code_sankey(days=days)
+    try:
+        distribution_plot = generate_response_code_distribution_plot(days=days)
+        logger.info(f"Distribution plot generated: {distribution_plot is not None}")
+    except Exception as e:
+        logger.error(f"Error generating distribution plot: {str(e)}", exc_info=True)
+        distribution_plot = None
+    
+    try:
+        time_series_plot = generate_response_code_time_series(days=days, interval='day' if days <= 7 else 'week')
+        logger.info(f"Time series plot generated: {time_series_plot is not None}")
+    except Exception as e:
+        logger.error(f"Error generating time series plot: {str(e)}", exc_info=True)
+        time_series_plot = None
+    
+    try:
+        heatmap_plot = generate_response_code_heatmap(days=days)
+        logger.info(f"Heatmap plot generated: {heatmap_plot is not None}")
+    except Exception as e:
+        logger.error(f"Error generating heatmap plot: {str(e)}", exc_info=True)
+        heatmap_plot = None
+    
+    try:
+        risk_score_plot = generate_risk_score_by_response_code(days=days)
+        logger.info(f"Risk score plot generated: {risk_score_plot is not None}")
+    except Exception as e:
+        logger.error(f"Error generating risk score plot: {str(e)}", exc_info=True)
+        risk_score_plot = None
+    
+    try:
+        sankey_plot = generate_response_code_sankey(days=days)
+        logger.info(f"Sankey plot generated: {sankey_plot is not None}")
+    except Exception as e:
+        logger.error(f"Error generating sankey plot: {str(e)}", exc_info=True)
+        sankey_plot = None
     
     # Get high-risk response code data
-    high_risk_codes = get_high_risk_response_code_data(days=days)
+    try:
+        high_risk_codes = get_high_risk_response_code_data(days=days)
+        logger.info(f"High risk codes data generated: {len(high_risk_codes) if high_risk_codes else 0} items")
+    except Exception as e:
+        logger.error(f"Error generating high risk codes data: {str(e)}", exc_info=True)
+        high_risk_codes = []
     
     # Get response code patterns
-    response_patterns = get_response_code_patterns(days=days)
+    try:
+        response_patterns = get_response_code_patterns(days=days)
+        logger.info(f"Response patterns data generated: {len(response_patterns) if response_patterns else 0} items")
+    except Exception as e:
+        logger.error(f"Error generating response patterns data: {str(e)}", exc_info=True)
+        response_patterns = []
     
     context = {
         'period': period,

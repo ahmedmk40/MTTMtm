@@ -99,10 +99,17 @@
                                 <li><a class="dropdown-item" href="/ml/models/create/">Create New Model</a></li>
                             </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/dashboard/">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="dashboardDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-tachometer-alt me-1"></i>Dashboard
                             </a>
+                            <ul class="dropdown-menu" aria-labelledby="dashboardDropdown">
+                                <li><a class="dropdown-item" href="/dashboard/">Main Dashboard</a></li>
+                                <li><a class="dropdown-item" href="{% url 'analytics:merchant_analysis' %}">Merchant Analysis</a></li>
+                                <li><a class="dropdown-item" href="{% url 'analytics:user_analysis' %}">User ID Analysis</a></li>
+                                <li><a class="dropdown-item" href="{% url 'analytics:risk_rankings' %}">Risk Rankings</a></li>
+                                <li><a class="dropdown-item" href="{% url 'analytics:response_codes' %}">Response Code Analysis</a></li>
+                            </ul>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/reports/">
